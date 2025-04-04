@@ -7,10 +7,35 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/aws"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+var (
+	headerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#7D56F4")).
+			Background(lipgloss.Color("#1a1a1a")).
+			Bold(true).
+			PaddingLeft(1)
+
+	selectedStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#04B575")).
+			Bold(true)
+
+	cursorStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#FF5F87"))
+
+	objectStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#D9D9D9"))
+
+	borderStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#3C3C3C")).
+			Padding(0, 1).
+			Margin(1, 2)
 )
 
 type model struct {
@@ -88,32 +113,37 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("Error: %v\n", m.err)
+		return borderStyle.Render(fmt.Sprintf("Error: %v", m.err))
 	}
 
 	var b strings.Builder
 
 	if !m.viewObjects {
-		b.WriteString("S3 Buckets (use ↑ ↓ to navigate, Enter to open, q to quit):\n\n")
+		title := headerStyle.Render("S3 Buckets") + "  (↑ ↓ to navigate, Enter to open, q to quit)"
+		b.WriteString(title + "\n\n")
 		for i, name := range m.buckets {
 			cursor := "  "
+			style := objectStyle
 			if i == m.selected {
-				cursor = "➜ "
+				cursor = cursorStyle.Render("➜ ")
+				style = selectedStyle
 			}
-			b.WriteString(fmt.Sprintf("%s%s\n", cursor, name))
+			b.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, name)) + "\n")
 		}
 	} else {
-		b.WriteString(fmt.Sprintf("Objects in bucket: %s (press Backspace to go back)\n\n", m.buckets[m.selected]))
+		title := headerStyle.Render(fmt.Sprintf("Objects in bucket: %s", m.buckets[m.selected])) +
+			"  (Backspace to go back)"
+		b.WriteString(title + "\n\n")
 		if len(m.objects) == 0 {
-			b.WriteString("No objects found.\n")
+			b.WriteString(objectStyle.Render("No objects found.\n"))
 		} else {
 			for _, obj := range m.objects {
-				b.WriteString(fmt.Sprintf("• %s\n", obj))
+				b.WriteString(objectStyle.Render("• "+obj) + "\n")
 			}
 		}
 	}
 
-	return b.String()
+	return borderStyle.Render(b.String())
 }
 
 func main() {
