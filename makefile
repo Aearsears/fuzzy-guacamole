@@ -29,15 +29,22 @@ build:  ## Builds the CLI
 	-ldflags "-w -s -X ${PACKAGE}/cmd.version=${VERSION} -X ${PACKAGE}/cmd.commit=${GIT_REV} -X ${PACKAGE}/cmd.date=${DATE}" \
 	-a -tags=${GO_TAGS} -o ${OUTPUT_BIN} main.go
 
-localstack:    
+localstack: ## start localstack container    
 	@docker pull localstack/localstack
-	@docker run -d -p 4566:4566 -p 4571:4571 --name localstack \
-  	-e SERVICES=s3 \
-  	-e DEBUG=1 \
-  	-v "$HOME/localstack:/tmp/localstack" \
-  	localstack/localstack		
+	@if [ !"$(docker ps -a -q -f name=localstack)" ]; then \
+		echo "Starting new LocalStack container..."; \
+		docker run -p 4566:4566 -p 4571:4571 --name localstack \
+		-e SERVICES=s3 \
+		-e DEBUG=1 \
+		-v "$$HOME/localstack:/tmp/localstack" \
+		localstack/localstack; \
+	else \
+		echo "Starting existing LocalStack container..."; \
+		docker start localstack; \
+		docker attach localstack; \
+	fi
 
-dev:
+dev: ## Run the CLI in development mode
 	@go run main.go --config ./configs/dev.yaml --log-level debug --log-format text --log-output stdout
 
 help:
