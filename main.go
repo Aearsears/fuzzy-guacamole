@@ -201,7 +201,7 @@ func main() {
 	s3Client := s3.NewFromConfig(cfg)
 
 	p := tea.NewProgram(initialModel(s3Client))
-	if err := p.Start(); err != nil {
+	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
