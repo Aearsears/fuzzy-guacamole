@@ -60,7 +60,7 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			// The "enter" key and the spacebar (a literal space) toggle
 			// the selected state for the item that the cursor is pointing at.
-		case "enter", " ":
+		case "enter":
 			m.selectedProfile = m.profiles[m.cursor]
 			// Check if the profile is already selected
 			return m, nil
