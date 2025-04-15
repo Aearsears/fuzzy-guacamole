@@ -19,6 +19,9 @@ type ProfileMenu struct {
 	cursor          int
 	selectedProfile string
 }
+type ProfileMenuMessage struct {
+	profile string
+}
 
 func InitProfileMenu() ProfileMenu {
 	profileSet := GetProfiles()
@@ -50,7 +53,6 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Cool, what was the actual key pressed?
 		switch msg.String() {
-
 		// The "up" and "k" keys move the cursor up
 		case "up", "k":
 			if m.cursor > 0 {
@@ -65,6 +67,10 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			m.selectedProfile = m.profiles[m.cursor]
+			return m, func() tea.Msg {
+				return ProfileMenuMessage{
+					m.selectedProfile}
+			}
 		}
 	}
 

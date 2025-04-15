@@ -46,6 +46,20 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
+	switch msg := msg.(type) {
+	case ProfileMenuMessage:
+		m.profile = msg.profile
+		// todo: if profile is different, then need to reautehntiate
+		m.state = mainMenu
+		return m, nil
+	case tea.KeyMsg:
+
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		}
+	}
+
 	switch m.state {
 	case mainMenu:
 		if m.views[int(mainMenu)] == nil {
@@ -57,8 +71,6 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyMsg:
 
 			switch msg.String() {
-			case "ctrl+c", "q":
-				return m, tea.Quit
 
 			case "up", "k":
 				if m.cursor > 0 {
@@ -79,37 +91,25 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = profileMenu
 					if m.views[int(profileMenu)] == nil {
 						m.views[int(profileMenu)] = InitProfileMenu()
+						cmd = m.views[int(profileMenu)].Init()
 					}
-					return m, nil
+					return m, cmd
 				}
 			}
 
 		}
 	case profileMenu:
-		if m.views[int(profileMenu)] == nil {
-			m.views[int(profileMenu)] = InitProfileMenu()
-			// cmd = m.views[int(profileMenu)].Init()
-			// cmds = append(cmds, cmd)
-		}
-
 		newProfile, newCmd := m.views[int(profileMenu)].Update(msg)
 		profileMenuModel, ok := newProfile.(ProfileMenu)
 		if !ok {
 			panic("assertion on profile menu failed")
 		}
 		m.views[int(profileMenu)] = profileMenuModel
-		// BUG: first time the menu is opened, the selected profile is instantly chosen since msg is passed to the profile menu
-		if profileMenuModel.selectedProfile != "" && profileMenuModel.selectedProfile != m.profile {
-			m.profile = profileMenuModel.selectedProfile
-			m.state = mainMenu
-		}
 		cmd = newCmd
 	}
 
 	cmds = append(cmds, cmd)
 
-	// Return the updated model to the Bubble Tea runtime for processing.
-	// Note that we're not returning a command.
 	return m, tea.Batch(cmds...)
 }
 
