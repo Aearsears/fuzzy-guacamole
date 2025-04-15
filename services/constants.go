@@ -1,4 +1,4 @@
-package main
+package services
 
 import (
 	"github.com/charmbracelet/bubbles/key"
