@@ -7,12 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"gopkg.in/ini.v1"
 )
 
 type ProfileMenu struct {
 	profiles        []string
+	spinner         spinner.Model
 	cursor          int
 	selectedProfile string
 }
@@ -23,15 +26,21 @@ func InitProfileMenu() ProfileMenu {
 	for key := range profileSet {
 		profiles = append(profiles, key)
 	}
+
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
 	return ProfileMenu{
 		profiles:        profiles,
 		cursor:          0,
 		selectedProfile: "",
+		spinner:         s,
 	}
 }
 
 func (m ProfileMenu) Init() tea.Cmd {
-	return nil
+	return m.spinner.Tick
 }
 func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -41,10 +50,6 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Cool, what was the actual key pressed?
 		switch msg.String() {
-
-		// These keys should exit the program.
-		case "ctrl+c", "q":
-			return m, tea.Quit
 
 		// The "up" and "k" keys move the cursor up
 		case "up", "k":
@@ -58,23 +63,18 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 
-			// The "enter" key and the spacebar (a literal space) toggle
-			// the selected state for the item that the cursor is pointing at.
 		case "enter":
 			m.selectedProfile = m.profiles[m.cursor]
-			// Check if the profile is already selected
-			return m, nil
-
 		}
 	}
 
-	// Return the updated model to the Bubble Tea runtime for processing.
-	// Note that we're not returning a command.
-	return m, nil
+	var cmd tea.Cmd
+	m.spinner, cmd = m.spinner.Update(msg)
+	return m, cmd
 }
 func (m ProfileMenu) View() string {
 	// The header
-	s := "Available AWS Profiles\n\n"
+	s := fmt.Sprintf("Available AWS Profiles %s \n\n", m.spinner.View())
 
 	// Iterate over our choices
 	for i, choice := range m.profiles {

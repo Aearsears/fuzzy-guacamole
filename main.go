@@ -22,6 +22,8 @@ type MainMenu struct {
 	cursor   int
 	selected map[int]struct{}
 	profile  string
+	// to implement
+	quitting bool
 }
 
 func initialMenu() MainMenu {
@@ -32,6 +34,7 @@ func initialMenu() MainMenu {
 		cursor:   0,
 		selected: make(map[int]struct{}),
 		profile:  "",
+		quitting: false,
 	}
 }
 
@@ -42,75 +45,72 @@ func (m MainMenu) Init() tea.Cmd {
 func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
-	switch msg := msg.(type) {
 
-	case tea.KeyMsg:
-
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-
-		// The "enter" key and the spacebar (a literal space) toggle
-		// the selected state for the item that the cursor is pointing at.
-		case "enter":
-			selected := m.choices[m.cursor]
-			if selected == "Profiles" {
-				// Switch to submenu and let it handle
-				m.state = profileMenu
-			}
+	switch m.state {
+	case mainMenu:
+		if m.views[int(mainMenu)] == nil {
+			m.views[int(mainMenu)] = m
 		}
 
-		switch m.state {
-		case mainMenu:
-			if m.views[int(mainMenu)] == nil {
-				m.views[int(mainMenu)] = m
+		switch msg := msg.(type) {
+
+		case tea.KeyMsg:
+
+			switch msg.String() {
+			case "ctrl+c", "q":
+				return m, tea.Quit
+
+			case "up", "k":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+
+			case "down", "j":
+				if m.cursor < len(m.choices)-1 {
+					m.cursor++
+				}
+
+			// The "enter" key and the spacebar (a literal space) toggle
+			// the selected state for the item that the cursor is pointing at.
+			case "enter":
+				selected := m.choices[m.cursor]
+				if selected == "Profiles" {
+					// Switch to submenu and let it handle
+					m.state = profileMenu
+					if m.views[int(profileMenu)] == nil {
+						m.views[int(profileMenu)] = InitProfileMenu()
+					}
+					return m, nil
+				}
 			}
-			// m.state = mainMenu
-		case profileMenu:
-			if m.views[int(profileMenu)] == nil {
-				m.views[int(profileMenu)] = InitProfileMenu()
-			}
-			// m.state = profileMenu
-			newProfile, newCmd := m.views[int(profileMenu)].Update(msg)
-			profileMenuModel, ok := newProfile.(ProfileMenu)
-			if !ok {
-				panic("assertion on profile menu failed")
-			}
-			m.views[int(profileMenu)] = profileMenuModel
-			// BUG: first time the menu is opened, the selected profile is instantly chosen since msg is passed to the profile menu
-			if profileMenuModel.selectedProfile != "" && profileMenuModel.selectedProfile != m.profile {
-				m.profile = profileMenuModel.selectedProfile
-				m.state = mainMenu
-			}
-			cmd = newCmd
+
+		}
+	case profileMenu:
+		if m.views[int(profileMenu)] == nil {
+			m.views[int(profileMenu)] = InitProfileMenu()
+			// cmd = m.views[int(profileMenu)].Init()
+			// cmds = append(cmds, cmd)
 		}
 
-		cmds = append(cmds, cmd)
-		return m, tea.Batch(cmds...)
-
+		newProfile, newCmd := m.views[int(profileMenu)].Update(msg)
+		profileMenuModel, ok := newProfile.(ProfileMenu)
+		if !ok {
+			panic("assertion on profile menu failed")
+		}
+		m.views[int(profileMenu)] = profileMenuModel
+		// BUG: first time the menu is opened, the selected profile is instantly chosen since msg is passed to the profile menu
+		if profileMenuModel.selectedProfile != "" && profileMenuModel.selectedProfile != m.profile {
+			m.profile = profileMenuModel.selectedProfile
+			m.state = mainMenu
+		}
+		cmd = newCmd
 	}
+
+	cmds = append(cmds, cmd)
 
 	// Return the updated model to the Bubble Tea runtime for processing.
 	// Note that we're not returning a command.
-	return m, nil
-}
-
-func (m MainMenu) profileMenu() {
-	p := tea.NewProgram(InitProfileMenu())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
-		os.Exit(1)
-	}
+	return m, tea.Batch(cmds...)
 }
 
 func (m MainMenu) View() string {
