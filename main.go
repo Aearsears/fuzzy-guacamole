@@ -30,7 +30,7 @@ func initialMenu() MainMenu {
 	return MainMenu{
 		state:    mainMenu,
 		views:    make(map[int]tea.Model),
-		choices:  []string{"S3", "DynamoDb", "Profiles"},
+		choices:  Services,
 		cursor:   0,
 		selected: make(map[int]struct{}),
 		profile:  "",

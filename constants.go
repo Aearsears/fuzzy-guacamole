@@ -15,6 +15,8 @@ var (
 	WindowSize tea.WindowSizeMsg
 )
 
+var Services = []string{"S3", "DynamoDB", "RDS", "Lambda", "SNS", "SQS", "CloudWatch", "IAM", "EC2", "Profiles"}
+
 /* STYLING */
 
 // DocStyle styling for viewports
