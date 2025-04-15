@@ -164,7 +164,7 @@ func (m S3Menu) View() string {
 	rightBox := rightPanel.Render(right.String())
 
 	return flexLayout.Render(
-		lipgloss.JoinHorizontal(lipgloss.Top, leftBox, rightBox),
+		lipgloss.JoinHorizontal(lipgloss.Top, s, leftBox, rightBox),
 	)
 }
 
