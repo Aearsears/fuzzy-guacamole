@@ -15,6 +15,7 @@ var (
 	WindowSize tea.WindowSizeMsg
 )
 
+// Services is a list of AWS services that are supported by the application
 var Services = []string{"S3", "DynamoDB", "RDS", "Lambda", "SNS", "SQS", "CloudWatch", "IAM", "EC2", "Profiles"}
 
 /* STYLING */

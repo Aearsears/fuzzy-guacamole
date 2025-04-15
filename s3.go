@@ -196,6 +196,9 @@ func CreateS3Client() *s3.Client {
 		log.Fatalf("unable to load SDK config, %v", err)
 	}
 
-	s3Client := s3.NewFromConfig(cfg)
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String("http://localhost:4566")
+		o.UsePathStyle = true
+	})
 	return s3Client
 }

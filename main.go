@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -15,6 +16,8 @@ const (
 	profileMenu
 	s3Menu
 )
+
+type GoBackMessage struct{}
 
 type MainMenu struct {
 	state    SessionState
@@ -54,9 +57,13 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = mainMenu
 		return m, nil
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(msg, Keymap.Quit):
 			return m, tea.Quit
+
+		case key.Matches(msg, Keymap.Back):
+			m.state = mainMenu
+			return m, nil
 		}
 	}
 
