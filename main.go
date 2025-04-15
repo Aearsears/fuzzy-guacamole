@@ -53,7 +53,6 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = mainMenu
 		return m, nil
 	case tea.KeyMsg:
-
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
@@ -152,17 +151,14 @@ func (m MainMenu) View() string {
 			// Is the cursor pointing at this choice?
 			cursor := " " // no cursor
 			if m.cursor == i {
-				cursor = cursorStyle.Render(">") // cursor!
-			}
-
-			// Is this choice selected?
-			checked := " " // not selected
-			if _, ok := m.selected[i]; ok {
-				checked = selectedStyle.Render("x") // selected!
+				cursor = cursorStyle.Render(">")      // cursor!
+				choice = selectedStyle.Render(choice) // Highlight the selected choice
+			} else {
+				choice = choiceStyle.Render(choice) // Regular style for unselected choices
 			}
 
 			// Render the row with styles
-			s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choiceStyle.Render(choice))
+			s += fmt.Sprintf("%s %s\n", cursor, choice)
 		}
 
 		// Footer with styling
