@@ -13,6 +13,7 @@ type SessionState int
 const (
 	mainMenu SessionState = iota
 	profileMenu
+	s3Menu
 )
 
 type MainMenu struct {
@@ -92,8 +93,14 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.views[int(profileMenu)] = InitProfileMenu()
 						cmd = m.views[int(profileMenu)].Init()
 					}
-					return m, cmd
+				} else if selected == "S3" {
+					// Switch to S3 menu and let it handle
+					m.state = s3Menu
+					if m.views[int(s3Menu)] == nil {
+						m.views[int(s3Menu)] = InitS3Menu(CreateS3Client())
+					}
 				}
+				return m, cmd
 			}
 
 		}
@@ -104,6 +111,14 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			panic("assertion on profile menu failed")
 		}
 		m.views[int(profileMenu)] = profileMenuModel
+		cmd = newCmd
+	case s3Menu:
+		newS3, newCmd := m.views[int(s3Menu)].Update(msg)
+		s3MenuModel, ok := newS3.(S3Menu)
+		if !ok {
+			panic("assertion on S3 menu failed")
+		}
+		m.views[int(s3Menu)] = s3MenuModel
 		cmd = newCmd
 	}
 
@@ -116,6 +131,8 @@ func (m MainMenu) View() string {
 	switch m.state {
 	case profileMenu:
 		return m.views[int(profileMenu)].View()
+	case s3Menu:
+		return m.views[int(s3Menu)].View()
 	default:
 		// Define the header style
 		headerStyle := lipgloss.NewStyle().
@@ -143,7 +160,6 @@ func (m MainMenu) View() string {
 			Foreground(lipgloss.Color("10")). // Green text for selected
 			Italic(true)
 
-			// The header with aligned "orofile"
 		s := headerStyle.Render("[AWS] Main Menu") + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
 
 		// Iterate over the menu choices

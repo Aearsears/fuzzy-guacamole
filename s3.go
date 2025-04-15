@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -15,6 +14,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Styling constants for the S3 menu
 var (
 	headerStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#7D56F4")).
@@ -39,8 +39,7 @@ var (
 			Margin(1, 2).
 			Width(100).
 			MaxWidth(100)
-)
-var (
+
 	leftPanel = lipgloss.NewStyle().
 			Width(30).
 			Border(lipgloss.RoundedBorder()).
@@ -57,7 +56,7 @@ var (
 			Width(100)
 )
 
-type model struct {
+type S3Menu struct {
 	buckets     []string
 	selected    int
 	viewObjects bool
@@ -66,7 +65,7 @@ type model struct {
 	err         error
 }
 
-func initialModel(s3Client *s3.Client) model {
+func InitS3Menu(s3Client *s3.Client) S3Menu {
 	// Load buckets on init
 	ctx := context.Background()
 	resp, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
@@ -76,7 +75,7 @@ func initialModel(s3Client *s3.Client) model {
 			names = append(names, *b.Name)
 		}
 	}
-	return model{
+	return S3Menu{
 		s3Client: s3Client,
 		buckets:  names,
 		selected: 0,
@@ -84,11 +83,11 @@ func initialModel(s3Client *s3.Client) model {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m S3Menu) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -127,9 +126,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m model) View() string {
+func (m S3Menu) View() string {
+	s := fmt.Sprintf("S3 Buckets %s\n", headerStyle.Render("S3"))
 	if m.err != nil {
-		return borderStyle.Render(fmt.Sprintf("Error: %v", m.err))
+		s += borderStyle.Render(fmt.Sprintf("Error: %v", m.err))
+		return s
 	}
 
 	var left strings.Builder
@@ -167,7 +168,7 @@ func (m model) View() string {
 	)
 }
 
-func s3menu() {
+func CreateS3Client() *s3.Client {
 	// Endpoint: http://localhost:4566
 	// Region: us-east-1
 	// Access key: test
@@ -196,10 +197,5 @@ func s3menu() {
 	}
 
 	s3Client := s3.NewFromConfig(cfg)
-
-	p := tea.NewProgram(initialModel(s3Client))
-	if _, err := p.Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
-	}
+	return s3Client
 }
