@@ -80,29 +80,27 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 func (m ProfileMenu) View() string {
 	// The header
-	s := fmt.Sprintf("Available AWS Profiles %s \n\n", m.spinner.View())
+	menu := fmt.Sprintf("Available AWS Profiles %s \n\n", m.spinner.View())
 
 	// Iterate over our choices
 	for i, choice := range m.profiles {
 
-		// Is the cursor pointing at this choice?
 		cursor := " " // no cursor
+		display := ""
+
 		if m.cursor == i {
-			cursor = ">" // cursor!
+			cursor = CursorStyle(">")              // cursor!
+			display = SelectedStyle.Render(choice) // Highlight the selected choice
+		} else {
+			display = ChoiceStyle(choice) // Regular style for unselected choices
 		}
 
-		// Is this choice selected?
-		checked := " " // not selected
-		if choice == m.selectedProfile {
-			checked = "x" // selected!
-		}
-
-		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+		// Render the row with styles
+		menu += fmt.Sprintf("%s %s\n", cursor, display)
 	}
 
 	// Send the UI for rendering
-	return s
+	return menu
 }
 
 func getProfilesFromFile(path string, isConfig bool) ([]string, error) {
