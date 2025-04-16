@@ -16,16 +16,11 @@ import (
 
 // Styling constants for the S3 menu
 var (
-	objectStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#D9D9D9"))
-
 	borderStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("#3C3C3C")).
-			Padding(0, 1).
-			Margin(1, 2).
-			Width(100).
-			MaxWidth(100)
+			BorderForeground(lipgloss.Color("#5A5A5A")).
+		//to fix: border goes beyon right edge
+		MaxWidth(WindowSize.Width)
 
 	leftPanel = lipgloss.NewStyle().
 			Width(30).
@@ -114,34 +109,35 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m S3Menu) View() string {
 	if m.err != nil {
-		return ErrStyle(fmt.Sprintf("Error: %v", m.err))
+		return borderStyle.Render(ErrStyle(fmt.Sprintf("Error: %v", m.err)))
 	}
 
 	var left strings.Builder
 	left.WriteString(HeaderStyle("Buckets") + "\n\n")
 	for i, name := range m.buckets {
-		cursor := "  "
-		style := objectStyle
+		cursor := " "
+		display := ""
 		if i == m.selected {
 			cursor = CursorStyle(">")
-			style = SelectedStyle
+			display = SelectedStyle.Render(name)
+		} else {
+			display = ChoiceStyle(name)
 		}
-		left.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, name)) + "\n")
+		left.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
 	}
 
 	var right strings.Builder
 	if m.viewObjects {
 		right.WriteString(HeaderStyle(fmt.Sprintf("Objects in: %s", m.buckets[m.selected])) + "\n\n")
 		if len(m.objects) == 0 {
-			right.WriteString(objectStyle.Render("No objects found.\n"))
+			right.WriteString(DocStyle("No objects found.\n"))
 		} else {
 			for _, obj := range m.objects {
-				right.WriteString(objectStyle.Render("• "+obj) + "\n")
+				right.WriteString(DocStyle("• "+obj) + "\n")
 			}
 		}
 	} else {
-		right.WriteString(objectStyle.Render("Press [Enter] to view bucket contents.\n"))
-		right.WriteString(objectStyle.Render("Use ↑/↓ to navigate, q to quit.\n"))
+		right.WriteString(DocStyle("Press [Enter] to view bucket contents.\nUse ↑/↓ to navigate, q to quit."))
 	}
 
 	leftBox := leftPanel.Render(left.String())
