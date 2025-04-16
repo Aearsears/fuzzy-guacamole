@@ -61,6 +61,7 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = s3Menu
 			if m.views[int(s3Menu)] == nil {
 				m.views[int(s3Menu)] = InitS3Menu(CreateS3Client())
+				cmd = m.views[int(s3Menu)].Init()
 			}
 		}
 		return m, cmd

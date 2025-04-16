@@ -44,6 +44,7 @@ type S3Menu struct {
 	objects     []string
 	s3Client    *s3.Client
 	err         error
+	loading     bool
 }
 
 func InitS3Menu(s3Client *s3.Client) S3Menu {
@@ -61,11 +62,12 @@ func InitS3Menu(s3Client *s3.Client) S3Menu {
 		buckets:  names,
 		selected: 0,
 		err:      err,
+		loading:  false,
 	}
 }
 
 func (m S3Menu) Init() tea.Cmd {
-	return nil
+	return Spinner.Tick
 }
 
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -104,12 +106,14 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewObjects = false
 		}
 	}
-	return m, nil
+	var cmd tea.Cmd
+	_, cmd = Spinner.Update(msg)
+	return m, cmd
 }
 
 func (m S3Menu) View() string {
 	if m.err != nil {
-		return borderStyle.Render(ErrStyle(fmt.Sprintf("Error: %v", m.err)))
+		return borderStyle.Render(ErrStyle(fmt.Sprintf(" %s Error: %v", Spinner.View(), m.err)))
 	}
 
 	var left strings.Builder

@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -14,6 +15,10 @@ var (
 	// WindowSize store the size of the terminal window
 	WindowSize tea.WindowSizeMsg
 )
+
+var Spinner = spinner.New(
+	spinner.WithSpinner(spinner.Dot),
+	spinner.WithStyle(lipgloss.NewStyle().Foreground(lipgloss.Color("205"))))
 
 /* STYLING */
 
