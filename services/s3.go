@@ -31,16 +31,15 @@ var (
 			Width(30).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#5A5A5A")).
-			Padding(0, 1)
+			MaxWidth(100)
 
 	rightPanel = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("#5A5A5A")).
-			Padding(0, 1)
+			MaxWidth(100)
 
 	flexLayout = lipgloss.NewStyle().
-			Align(lipgloss.Left).
-			Width(100)
+			Align(lipgloss.Left)
 )
 
 type S3Menu struct {
@@ -114,10 +113,8 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m S3Menu) View() string {
-	s := HeaderStyle("S3 Buckets \n")
 	if m.err != nil {
-		s += ErrStyle(fmt.Sprintf("Error: %v", m.err))
-		return s
+		return ErrStyle(fmt.Sprintf("Error: %v", m.err))
 	}
 
 	var left strings.Builder
@@ -151,7 +148,7 @@ func (m S3Menu) View() string {
 	rightBox := rightPanel.Render(right.String())
 
 	return flexLayout.Render(
-		lipgloss.JoinHorizontal(lipgloss.Top, s, leftBox, rightBox),
+		lipgloss.JoinHorizontal(lipgloss.Top, leftBox, rightBox),
 	)
 }
 
