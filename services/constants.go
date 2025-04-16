@@ -15,9 +15,6 @@ var (
 	WindowSize tea.WindowSizeMsg
 )
 
-// Services is a list of AWS services that are supported by the application
-var Services = []string{"S3", "DynamoDB", "RDS", "Lambda", "SNS", "SQS", "CloudWatch", "IAM", "EC2", "Profiles"}
-
 /* STYLING */
 
 // DocStyle styling for viewports
@@ -31,6 +28,29 @@ var ErrStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#bd534b")).Render
 
 // AlertStyle provides styling for alert messages
 var AlertStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("62")).Render
+
+var HeaderStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("#7D56F4")). // Purple text
+	Background(lipgloss.Color("#1a1a1a")). // Dark background
+	Bold(true).
+	PaddingLeft(1)
+
+var ProfileStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("12")). // Red text
+	Align(lipgloss.Right)
+
+var ChoiceStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("7")) // Grey color for text
+
+var CursorStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("12")) // Red for the cursor
+
+var SelectedStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("10")). // Green text for selected
+	Italic(true)
+
+var FooterStyle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("8")) // Light grey footer
 
 type keymap struct {
 	Create key.Binding

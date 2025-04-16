@@ -3,41 +3,37 @@ package services
 import (
 	"fmt"
 
-	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-)
-
-type SessionState int
-
-const (
-	mainMenu SessionState = iota
-	profileMenu
-	s3Menu
 )
 
 type GoBackMessage struct{}
 
+// services is a list of AWS services that are supported by the application
+var services = []string{"S3", "Profiles", "DynamoDB", "RDS", "Lambda", "SNS", "SQS", "CloudWatch", "IAM", "EC2"}
+
+type MenuItem struct {
+	name  string
+	state SessionState
+}
+
 type MainMenu struct {
-	state    SessionState
-	views    map[int]tea.Model
-	choices  []string
+	choices  []MenuItem
 	cursor   int
 	selected map[int]struct{}
-	profile  string
-	// to implement
-	quitting bool
 }
 
 func InitialMenu() MainMenu {
+	menuItems := make([]MenuItem, len(services))
+	for i, service := range services {
+		menuItems[i] = MenuItem{
+			name:  service,
+			state: SessionState(i + 1),
+		}
+	}
 	return MainMenu{
-		state:    mainMenu,
-		views:    make(map[int]tea.Model),
-		choices:  Services,
+		choices:  menuItems,
 		cursor:   0,
 		selected: make(map[int]struct{}),
-		profile:  "",
-		quitting: false,
 	}
 }
 
@@ -46,154 +42,52 @@ func (m MainMenu) Init() tea.Cmd {
 }
 
 func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	var cmds []tea.Cmd
-
 	switch msg := msg.(type) {
-	case ProfileMenuMessage:
-		m.profile = msg.profile
-		// todo: if profile is different, then need to reautehntiate
-		m.state = mainMenu
-		return m, nil
-	case tea.WindowSizeMsg:
-		// todo: implement resize handling
-		WindowSize = msg
-		// top, right, bottom, left := DocStyle.GetMargin()
-
 	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, Keymap.Quit):
-			return m, tea.Quit
+		switch msg.String() {
 
-		case key.Matches(msg, Keymap.Back):
-			m.state = mainMenu
-			return m, nil
-		}
-	}
-
-	switch m.state {
-	case mainMenu:
-		if m.views[int(mainMenu)] == nil {
-			m.views[int(mainMenu)] = m
-		}
-
-		switch msg := msg.(type) {
-
-		case tea.KeyMsg:
-
-			switch msg.String() {
-
-			case "up", "k":
-				if m.cursor > 0 {
-					m.cursor--
-				}
-
-			case "down", "j":
-				if m.cursor < len(m.choices)-1 {
-					m.cursor++
-				}
-
-			// The "enter" key and the spacebar (a literal space) toggle
-			// the selected state for the item that the cursor is pointing at.
-			case "enter":
-				selected := m.choices[m.cursor]
-				if selected == "Profiles" {
-					// Switch to submenu and let it handle
-					m.state = profileMenu
-					if m.views[int(profileMenu)] == nil {
-						m.views[int(profileMenu)] = InitProfileMenu()
-						cmd = m.views[int(profileMenu)].Init()
-					}
-				} else if selected == "S3" {
-					// Switch to S3 menu and let it handle
-					m.state = s3Menu
-					if m.views[int(s3Menu)] == nil {
-						m.views[int(s3Menu)] = InitS3Menu(CreateS3Client())
-					}
-				}
-				return m, cmd
+		case "up", "k":
+			if m.cursor > 0 {
+				m.cursor--
 			}
 
+		case "down", "j":
+			if m.cursor < len(m.choices)-1 {
+				m.cursor++
+			}
+
+		case "enter":
+			selected := m.choices[m.cursor]
+			return m, func() tea.Msg {
+				return SwitchMenuMessage{
+					selected.state}
+			}
 		}
-	case profileMenu:
-		newProfile, newCmd := m.views[int(profileMenu)].Update(msg)
-		profileMenuModel, ok := newProfile.(ProfileMenu)
-		if !ok {
-			panic("assertion on profile menu failed")
-		}
-		m.views[int(profileMenu)] = profileMenuModel
-		cmd = newCmd
-	case s3Menu:
-		newS3, newCmd := m.views[int(s3Menu)].Update(msg)
-		s3MenuModel, ok := newS3.(S3Menu)
-		if !ok {
-			panic("assertion on S3 menu failed")
-		}
-		m.views[int(s3Menu)] = s3MenuModel
-		cmd = newCmd
+
 	}
 
-	cmds = append(cmds, cmd)
-
-	return m, tea.Batch(cmds...)
+	return m, nil
 }
 
 func (m MainMenu) View() string {
-	switch m.state {
-	case profileMenu:
-		return m.views[int(profileMenu)].View()
-	case s3Menu:
-		return m.views[int(s3Menu)].View()
-	default:
-		// Define the header style
-		headerStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")). // Purple text
-			Background(lipgloss.Color("#1a1a1a")). // Dark background
-			Bold(true).
-			PaddingLeft(1)
-		// Get the terminal width to align "orofile" to the far right
-		termWidth := lipgloss.Width(headerStyle.Render("[AWS] Main Menu")) + 10 // Adding extra space to avoid clipping
+	menu := ""
+	// Iterate over the menu choices
+	for i, choice := range m.choices {
+		// Is the cursor pointing at this choice?
+		cursor := " " // no cursor
+		display := ""
 
-		profileStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("12")). // Red text for "orofile"
-			Align(lipgloss.Right).
-			Width(termWidth) // Align text to the right
-		// Define the choice style (for regular menu items)
-		choiceStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("7")) // Grey color for text
-
-		// Define the cursor style (for selected menu item)
-		cursorStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("12")) // Red for the cursor
-
-		// Define the selected item style
-		selectedStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("10")). // Green text for selected
-			Italic(true)
-
-		s := headerStyle.Render("[AWS] Main Menu") + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
-
-		// Iterate over the menu choices
-		for i, choice := range m.choices {
-			// Is the cursor pointing at this choice?
-			cursor := " " // no cursor
-			if m.cursor == i {
-				cursor = cursorStyle.Render(">")      // cursor!
-				choice = selectedStyle.Render(choice) // Highlight the selected choice
-			} else {
-				choice = choiceStyle.Render(choice) // Regular style for unselected choices
-			}
-
-			// Render the row with styles
-			s += fmt.Sprintf("%s %s\n", cursor, choice)
+		if m.cursor == i {
+			cursor = CursorStyle.Render(">")            // cursor!
+			display = SelectedStyle.Render(choice.name) // Highlight the selected choice
+		} else {
+			display = ChoiceStyle.Render(choice.name) // Regular style for unselected choices
 		}
 
-		// Footer with styling
-		footerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("8")) // Light grey footer
-		s += "\n" + footerStyle.Render("Press q to quit.\n")
-
-		// Send the UI for rendering
-		return s
-
+		// Render the row with styles
+		menu += fmt.Sprintf("%s %s\n", cursor, display)
 	}
+
+	return menu
+
 }
