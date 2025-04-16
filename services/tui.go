@@ -121,18 +121,25 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TUI) View() string {
 	menu := ""
 
-	termWidth := lipgloss.Width(HeaderStyle("[AWS] Main Menu")) + 10 // Adding extra space to avoid clipping
-	profileStyle := ProfileStyle.Width(termWidth)                    // Align text to the right
-	menu += HeaderStyle("[AWS] Main Menu") + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
-
 	switch m.state {
 	case mainMenu:
+		s := "[AWS] Main Menu"
+		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
+		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
+		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
 		menu += m.views[int(mainMenu)].View()
 	case profileMenu:
+		s := "[AWS] Profiles"
+		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
+		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
+		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
 		menu += m.views[int(profileMenu)].View()
 	case s3Menu:
+		s := "[AWS] S3"
+		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
+		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
+		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
 		menu += m.views[int(s3Menu)].View()
-
 	}
 
 	menu += "\n" + FooterStyle("Press q to quit.\n")

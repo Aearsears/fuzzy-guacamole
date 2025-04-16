@@ -123,7 +123,7 @@ func (m S3Menu) View() string {
 		cursor := "  "
 		style := objectStyle
 		if i == m.selected {
-			cursor = CursorStyle("➜ ")
+			cursor = CursorStyle(">")
 			style = SelectedStyle
 		}
 		left.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, name)) + "\n")
