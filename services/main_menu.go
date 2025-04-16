@@ -78,10 +78,10 @@ func (m MainMenu) View() string {
 		display := ""
 
 		if m.cursor == i {
-			cursor = CursorStyle.Render(">")            // cursor!
+			cursor = CursorStyle(">")                   // cursor!
 			display = SelectedStyle.Render(choice.name) // Highlight the selected choice
 		} else {
-			display = ChoiceStyle.Render(choice.name) // Regular style for unselected choices
+			display = ChoiceStyle(choice.name) // Regular style for unselected choices
 		}
 
 		// Render the row with styles

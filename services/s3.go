@@ -114,19 +114,19 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m S3Menu) View() string {
-	s := HeaderStyle.Render("S3 Buckets \n")
+	s := HeaderStyle("S3 Buckets \n")
 	if m.err != nil {
 		s += ErrStyle(fmt.Sprintf("Error: %v", m.err))
 		return s
 	}
 
 	var left strings.Builder
-	left.WriteString(HeaderStyle.Render("Buckets") + "\n\n")
+	left.WriteString(HeaderStyle("Buckets") + "\n\n")
 	for i, name := range m.buckets {
 		cursor := "  "
 		style := objectStyle
 		if i == m.selected {
-			cursor = CursorStyle.Render("➜ ")
+			cursor = CursorStyle("➜ ")
 			style = SelectedStyle
 		}
 		left.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, name)) + "\n")
@@ -134,7 +134,7 @@ func (m S3Menu) View() string {
 
 	var right strings.Builder
 	if m.viewObjects {
-		right.WriteString(HeaderStyle.Render(fmt.Sprintf("Objects in: %s", m.buckets[m.selected])) + "\n\n")
+		right.WriteString(HeaderStyle(fmt.Sprintf("Objects in: %s", m.buckets[m.selected])) + "\n\n")
 		if len(m.objects) == 0 {
 			right.WriteString(objectStyle.Render("No objects found.\n"))
 		} else {

@@ -120,9 +120,9 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TUI) View() string {
 	menu := ""
 
-	termWidth := lipgloss.Width(HeaderStyle.Render("[AWS] Main Menu")) + 10 // Adding extra space to avoid clipping
-	profileStyle := ProfileStyle.Width(termWidth)                           // Align text to the right
-	menu += HeaderStyle.Render("[AWS] Main Menu") + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
+	termWidth := lipgloss.Width(HeaderStyle("[AWS] Main Menu")) + 10 // Adding extra space to avoid clipping
+	profileStyle := ProfileStyle.Width(termWidth)                    // Align text to the right
+	menu += HeaderStyle("[AWS] Main Menu") + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
 
 	switch m.state {
 	case mainMenu:
@@ -134,6 +134,6 @@ func (m TUI) View() string {
 
 	}
 
-	menu += "\n" + FooterStyle.Render("Press q to quit.\n")
+	menu += "\n" + FooterStyle("Press q to quit.\n")
 	return menu
 }

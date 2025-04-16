@@ -18,7 +18,7 @@ var (
 /* STYLING */
 
 // DocStyle styling for viewports
-var DocStyle = lipgloss.NewStyle().Margin(0, 2)
+var DocStyle = lipgloss.NewStyle().Margin(0, 2).Render
 
 // HelpStyle styling for help context menu
 var HelpStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render
@@ -33,24 +33,28 @@ var HeaderStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("#7D56F4")). // Purple text
 	Background(lipgloss.Color("#1a1a1a")). // Dark background
 	Bold(true).
-	PaddingLeft(1)
+	PaddingLeft(1).
+	Render
 
 var ProfileStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("12")). // Red text
 	Align(lipgloss.Right)
 
 var ChoiceStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("7")) // Grey color for text
+	Foreground(lipgloss.Color("7")). // Grey color for text
+	Render
 
 var CursorStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("12")) // Red for the cursor
+	Foreground(lipgloss.Color("12")). // Red for the cursor
+	Render
 
 var SelectedStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("10")). // Green text for selected
 	Italic(true)
 
 var FooterStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("8")) // Light grey footer
+	Foreground(lipgloss.Color("8")). // Light grey footer
+	Render
 
 type keymap struct {
 	Create key.Binding
