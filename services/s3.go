@@ -16,19 +16,6 @@ import (
 
 // Styling constants for the S3 menu
 var (
-	headerStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
-			Background(lipgloss.Color("#1a1a1a")).
-			Bold(true).
-			PaddingLeft(1)
-
-	selectedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#04B575")).
-			Bold(true)
-
-	cursorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FF5F87"))
-
 	objectStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#D9D9D9"))
 
@@ -127,27 +114,27 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m S3Menu) View() string {
-	s := fmt.Sprintf("S3 Buckets %s\n", headerStyle.Render("S3"))
+	s := HeaderStyle.Render("S3 Buckets \n")
 	if m.err != nil {
-		s += borderStyle.Render(fmt.Sprintf("Error: %v", m.err))
+		s += ErrStyle(fmt.Sprintf("Error: %v", m.err))
 		return s
 	}
 
 	var left strings.Builder
-	left.WriteString(headerStyle.Render("Buckets") + "\n\n")
+	left.WriteString(HeaderStyle.Render("Buckets") + "\n\n")
 	for i, name := range m.buckets {
 		cursor := "  "
 		style := objectStyle
 		if i == m.selected {
-			cursor = cursorStyle.Render("➜ ")
-			style = selectedStyle
+			cursor = CursorStyle.Render("➜ ")
+			style = SelectedStyle
 		}
 		left.WriteString(style.Render(fmt.Sprintf("%s%s", cursor, name)) + "\n")
 	}
 
 	var right strings.Builder
 	if m.viewObjects {
-		right.WriteString(headerStyle.Render(fmt.Sprintf("Objects in: %s", m.buckets[m.selected])) + "\n\n")
+		right.WriteString(HeaderStyle.Render(fmt.Sprintf("Objects in: %s", m.buckets[m.selected])) + "\n\n")
 		if len(m.objects) == 0 {
 			right.WriteString(objectStyle.Render("No objects found.\n"))
 		} else {

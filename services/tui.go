@@ -122,7 +122,7 @@ func (m TUI) View() string {
 
 	termWidth := lipgloss.Width(HeaderStyle.Render("[AWS] Main Menu")) + 10 // Adding extra space to avoid clipping
 	profileStyle := ProfileStyle.Width(termWidth)                           // Align text to the right
-	menu += headerStyle.Render("[AWS] Main Menu") + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
+	menu += HeaderStyle.Render("[AWS] Main Menu") + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
 
 	switch m.state {
 	case mainMenu:
