@@ -114,16 +114,21 @@ func (m S3Menu) View() string {
 
 	var left strings.Builder
 	left.WriteString(HeaderStyle("Buckets") + "\n\n")
-	for i, name := range m.buckets {
-		cursor := " "
-		display := ""
-		if i == m.selected {
-			cursor = CursorStyle(">")
-			display = SelectedStyle.Render(name)
-		} else {
-			display = ChoiceStyle(name)
+	if len(m.buckets) == 0 {
+		left.WriteString(DocStyle("No buckets found.\n"))
+	} else {
+
+		for i, name := range m.buckets {
+			cursor := " "
+			display := ""
+			if i == m.selected {
+				cursor = CursorStyle(">")
+				display = SelectedStyle.Render(name)
+			} else {
+				display = ChoiceStyle(name)
+			}
+			left.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
 		}
-		left.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
 	}
 
 	var right strings.Builder
