@@ -49,6 +49,7 @@ type S3Menu struct {
 
 func InitS3Menu(s3Client *s3.Client) S3Menu {
 	// Load buckets on init
+	//todo : make it load in background and display loading
 	ctx := context.Background()
 	resp, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	var names []string
@@ -67,6 +68,8 @@ func InitS3Menu(s3Client *s3.Client) S3Menu {
 }
 
 func (m S3Menu) Init() tea.Cmd {
+	//todo : fix loading spinner
+
 	return Spinner.Tick
 }
 
