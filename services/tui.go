@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/reflow/wordwrap"
 )
 
 type SessionState int
@@ -135,5 +136,5 @@ func (m TUI) View() string {
 	}
 
 	menu += "\n" + FooterStyle("Press q to quit.\n")
-	return menu
+	return wordwrap.String(menu, WindowSize.Width)
 }
