@@ -47,9 +47,14 @@ type S3Menu struct {
 	loading     bool
 }
 
-func InitS3Menu(s3Client *s3.Client) S3Menu {
-	// Load buckets on init
-	//todo : make it load in background and display loading
+type S3MenuMessage struct {
+	loadBuckets bool
+	buckets     []string
+	err         error
+}
+
+func loadBuckets(s3Client *s3.Client) tea.Cmd {
+
 	ctx := context.Background()
 	resp, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	var names []string
@@ -58,23 +63,87 @@ func InitS3Menu(s3Client *s3.Client) S3Menu {
 			names = append(names, *b.Name)
 		}
 	}
-	return S3Menu{
-		s3Client: s3Client,
-		buckets:  names,
-		selected: 0,
-		err:      err,
-		loading:  false,
+
+	return func() tea.Msg {
+		return S3MenuMessage{
+			buckets:     names,
+			err:         err,
+			loadBuckets: false,
+		}
 	}
+}
+func InitS3Menu() S3Menu {
+	// Load buckets on init
+	return S3Menu{
+		s3Client: createS3Client(),
+		buckets:  nil,
+		objects:  nil,
+		selected: 0,
+		err:      nil,
+		loading:  true,
+	}
+}
+
+func createS3Client() *s3.Client {
+	// Endpoint: http://localhost:4566
+	// Region: us-east-1
+	// Access key: test
+	// Secret key: test
+	// Custom endpoint resolver
+	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		if service == s3.ServiceID {
+			return aws.Endpoint{
+				URL:           "http://localhost:4566", // LocalStack endpoint
+				SigningRegion: "us-east-1",
+			}, nil
+		}
+		return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
+	})
+	staticCreds := aws.NewCredentialsCache(
+		credentials.NewStaticCredentialsProvider("test", "test", ""),
+	)
+	// Load config with custom resolver
+	cfg, err := config.LoadDefaultConfig(context.TODO(),
+		config.WithRegion("us-east-1"),
+		config.WithCredentialsProvider(staticCreds),
+		config.WithEndpointResolverWithOptions(customResolver),
+	)
+	if err != nil {
+		log.Fatalf("unable to load SDK config, %v", err)
+	}
+
+	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String("http://localhost:4566")
+		o.UsePathStyle = true
+	})
+	return s3Client
 }
 
 func (m S3Menu) Init() tea.Cmd {
 	//todo : fix loading spinner
-
-	return Spinner.Tick
+	return tea.Batch(Spinner.Tick, func() tea.Msg {
+		return S3MenuMessage{
+			loadBuckets: true,
+		}
+	})
 }
 
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case S3MenuMessage:
+		if msg.loadBuckets {
+			return m, loadBuckets(m.s3Client)
+		}
+		if msg.err != nil {
+			m.err = msg.err
+			m.loading = false
+		} else {
+			m.buckets = msg.buckets
+			m.loading = false
+		}
+		return m, nil
+
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up":
@@ -115,13 +184,14 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m S3Menu) View() string {
-	if m.err != nil {
-		return borderStyle.Render(ErrStyle(fmt.Sprintf(" %s Error: %v", Spinner.View(), m.err)))
-	}
 
 	var left strings.Builder
 	left.WriteString(HeaderStyle("Buckets") + "\n\n")
-	if len(m.buckets) == 0 {
+	if m.loading {
+		left.WriteString(DocStyle(fmt.Sprintf("%s Loading buckets...\n", Spinner.View())))
+	} else if m.err != nil {
+		left.WriteString(ErrStyle(fmt.Sprintf("Error: %v", m.err)))
+	} else if len(m.buckets) == 0 {
 		left.WriteString(DocStyle("No buckets found.\n"))
 	} else {
 
@@ -158,39 +228,4 @@ func (m S3Menu) View() string {
 	return flexLayout.Render(
 		lipgloss.JoinHorizontal(lipgloss.Top, leftBox, rightBox),
 	)
-}
-
-func CreateS3Client() *s3.Client {
-	// Endpoint: http://localhost:4566
-	// Region: us-east-1
-	// Access key: test
-	// Secret key: test
-	// Custom endpoint resolver
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		if service == s3.ServiceID {
-			return aws.Endpoint{
-				URL:           "http://localhost:4566", // LocalStack endpoint
-				SigningRegion: "us-east-1",
-			}, nil
-		}
-		return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
-	})
-	staticCreds := aws.NewCredentialsCache(
-		credentials.NewStaticCredentialsProvider("test", "test", ""),
-	)
-	// Load config with custom resolver
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("us-east-1"),
-		config.WithCredentialsProvider(staticCreds),
-		config.WithEndpointResolverWithOptions(customResolver),
-	)
-	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
-	}
-
-	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String("http://localhost:4566")
-		o.UsePathStyle = true
-	})
-	return s3Client
 }

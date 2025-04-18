@@ -43,6 +43,7 @@ func InitProfileMenu() ProfileMenu {
 }
 
 func (m ProfileMenu) Init() tea.Cmd {
+	// todo: perform io loading in here
 	return m.spinner.Tick
 }
 func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
