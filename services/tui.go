@@ -96,6 +96,7 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.views[int(mainMenu)] = mainMenuModel
 		cmd = newCmd
+		cmds = append(cmds, cmd)
 	case profileMenu:
 		newProfile, newCmd := m.views[int(profileMenu)].Update(msg)
 		profileMenuModel, ok := newProfile.(ProfileMenu)
@@ -104,6 +105,7 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.views[int(profileMenu)] = profileMenuModel
 		cmd = newCmd
+		cmds = append(cmds, cmd)
 	case s3Menu:
 		newS3, newCmd := m.views[int(s3Menu)].Update(msg)
 		s3MenuModel, ok := newS3.(S3Menu)
@@ -112,6 +114,7 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.views[int(s3Menu)] = s3MenuModel
 		cmd = newCmd
+		cmds = append(cmds, cmd)
 	}
 
 	cmds = append(cmds, cmd)

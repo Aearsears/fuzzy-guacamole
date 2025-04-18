@@ -151,6 +151,10 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "backspace":
 			m.viewObjects = false
 		}
+	default:
+		m.spinner, cmd = m.spinner.Update(msg)
+		cmds = append(cmds, cmd)
+
 	}
 	return m, tea.Batch(cmds...)
 }
