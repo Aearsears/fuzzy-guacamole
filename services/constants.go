@@ -65,16 +65,27 @@ var FooterStyle = lipgloss.NewStyle().
 	Render
 
 type keymap struct {
-	Create key.Binding
-	Enter  key.Binding
-	Rename key.Binding
-	Delete key.Binding
-	Back   key.Binding
-	Quit   key.Binding
+	Up        key.Binding
+	Down      key.Binding
+	Create    key.Binding
+	Enter     key.Binding
+	Rename    key.Binding
+	Delete    key.Binding
+	Back      key.Binding
+	Quit      key.Binding
+	Backspace key.Binding
 }
 
 // Keymap reusable key mappings shared across models
 var Keymap = keymap{
+	Up: key.NewBinding(
+		key.WithKeys("up", "k"),
+		key.WithHelp("up/k", "up"),
+	),
+	Down: key.NewBinding(
+		key.WithKeys("down", "j"),
+		key.WithHelp("down/j", "down"),
+	),
 	Create: key.NewBinding(
 		key.WithKeys("c"),
 		key.WithHelp("c", "create"),
@@ -93,10 +104,14 @@ var Keymap = keymap{
 	),
 	Back: key.NewBinding(
 		key.WithKeys("esc"),
-		key.WithHelp("esc", "back"),
+		key.WithHelp("esc", "back to main menu"),
 	),
 	Quit: key.NewBinding(
 		key.WithKeys("ctrl+c", "q"),
 		key.WithHelp("ctrl+c/q", "quit"),
+	),
+	Backspace: key.NewBinding(
+		key.WithKeys("backspace"),
+		key.WithHelp("backspace", "back to previous menu"),
 	),
 }

@@ -146,8 +146,11 @@ func (m TUI) View() string {
 		menu += m.views[int(s3Menu)].View()
 	}
 	helpText := "\n"
+	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Up.Help()))
+	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Down.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Enter.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Back.Help()))
+	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Backspace.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s \n", Keymap.Quit.Help()))
 
 	menu += helpText

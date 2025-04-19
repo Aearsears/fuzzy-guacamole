@@ -11,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/charmbracelet/bubbles/spinner"
+
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -119,18 +121,18 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "up":
+		switch {
+		case key.Matches(msg, Keymap.Up):
 			if m.selected > 0 {
 				m.selected--
 			}
 
-		case "down":
+		case key.Matches(msg, Keymap.Down):
 			if m.selected < len(m.buckets)-1 {
 				m.selected++
 			}
 
-		case "enter":
+		case key.Matches(msg, Keymap.Enter):
 			// Fetch objects for selected bucket
 			bucket := m.buckets[m.selected]
 			ctx := context.Background()
@@ -148,7 +150,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.viewObjects = true
 			m.objects = objs
-		case "backspace":
+		case key.Matches(msg, Keymap.Backspace):
 			m.viewObjects = false
 		}
 	default:

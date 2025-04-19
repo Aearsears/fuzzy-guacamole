@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -49,24 +50,20 @@ func (m ProfileMenu) Init() tea.Cmd {
 func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
-	// Is it a key press?
 	case tea.KeyMsg:
 
-		// Cool, what was the actual key pressed?
-		switch msg.String() {
-		// The "up" and "k" keys move the cursor up
-		case "up", "k":
+		switch {
+		case key.Matches(msg, Keymap.Up):
 			if m.cursor > 0 {
 				m.cursor--
 			}
 
-		// The "down" and "j" keys move the cursor down
-		case "down", "j":
+		case key.Matches(msg, Keymap.Down):
 			if m.cursor < len(m.profiles)-1 {
 				m.cursor++
 			}
 
-		case "enter":
+		case key.Matches(msg, Keymap.Enter):
 			m.selectedProfile = m.profiles[m.cursor]
 			return m, func() tea.Msg {
 				return ProfileMenuMessage{

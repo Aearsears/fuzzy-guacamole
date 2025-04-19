@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -44,19 +45,19 @@ func (m MainMenu) Init() tea.Cmd {
 func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
+		switch {
 
-		case "up", "k":
+		case key.Matches(msg, Keymap.Up):
 			if m.cursor > 0 {
 				m.cursor--
 			}
 
-		case "down", "j":
+		case key.Matches(msg, Keymap.Down):
 			if m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
 
-		case "enter":
+		case key.Matches(msg, Keymap.Enter):
 			selected := m.choices[m.cursor]
 			return m, func() tea.Msg {
 				return SwitchMenuMessage{
