@@ -145,7 +145,11 @@ func (m TUI) View() string {
 		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
 		menu += m.views[int(s3Menu)].View()
 	}
+	helpText := "\n"
+	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Enter.Help()))
+	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Back.Help()))
+	helpText += FooterStyle(fmt.Sprintf("%s \n", Keymap.Quit.Help()))
 
-	menu += "\n" + FooterStyle("Press q to quit.\n")
+	menu += helpText
 	return wordwrap.String(menu, WindowSize.Width)
 }
