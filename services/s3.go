@@ -63,19 +63,26 @@ func loadBuckets(s3Client *s3.Client) tea.Cmd {
 	ctx := context.Background()
 	resp, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
 	var names []string
+	var resp_str string
 	if err == nil {
 		for _, b := range resp.Buckets {
 			names = append(names, *b.Name)
 		}
+		resp_str = fmt.Sprintf("S3: Listed %d buckets successfully", len(resp.Buckets))
+
 	}
 
-	return func() tea.Msg {
+	return tea.Batch(func() tea.Msg {
 		return S3MenuMessage{
 			buckets:     names,
 			err:         err,
 			loadBuckets: false,
 		}
-	}
+	}, func() tea.Msg {
+		return APIMessage{
+			err:      err,
+			response: resp_str}
+	})
 }
 
 func createBucket(s3Client *s3.Client) tea.Cmd {
@@ -193,7 +200,7 @@ func (m S3Menu) View() string {
 	if m.loading {
 		left.WriteString(DocStyle(fmt.Sprintf("%s Loading buckets...\n", m.spinner.View())))
 	} else if m.err != nil {
-		left.WriteString(ErrStyle(fmt.Sprintf("Error: %v", m.err)))
+		left.WriteString(ErrStyle("Error: :c"))
 	} else if len(m.buckets) == 0 {
 		left.WriteString(DocStyle("No buckets found.\n"))
 	} else {
@@ -222,7 +229,7 @@ func (m S3Menu) View() string {
 			}
 		}
 	} else {
-		right.WriteString(DocStyle("Press [Enter] to view bucket contents.\nUse ↑/↓ to navigate, q to quit."))
+		right.WriteString(DocStyle("Press [Enter] to view bucket contents."))
 	}
 
 	leftBox := leftPanel.Render(left.String())

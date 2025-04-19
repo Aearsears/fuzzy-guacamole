@@ -25,8 +25,7 @@ type TUI struct {
 	state     SessionState
 	views     map[int]tea.Model
 	profile   string
-	err       error
-	statusBar string
+	statusBar StatusBar
 	// to implement
 	quitting bool
 }
@@ -39,8 +38,7 @@ func InitTUI() TUI {
 		views:     views,
 		profile:   "N/A",
 		quitting:  false,
-		err:       nil,
-		statusBar: "",
+		statusBar: InitStatusBar(),
 	}
 }
 
@@ -74,10 +72,14 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// todo: if profile is different, then need to reautehntiate
 		m.state = mainMenu
 		return m, nil
-	case S3MenuMessage:
-		if msg.err != nil {
-			m.err = msg.err
+	case APIMessage, StatusBarTimeoutMessage:
+		newStatusBar, newCmd := m.statusBar.Update(msg)
+		statusBar, ok := newStatusBar.(StatusBar)
+		if !ok {
+			panic("assertion on statusBar failed")
 		}
+		m.statusBar = statusBar
+		return m, newCmd
 
 	case tea.WindowSizeMsg:
 		// todo: implement resize handling
@@ -105,7 +107,6 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.views[int(mainMenu)] = mainMenuModel
 		cmd = newCmd
-		cmds = append(cmds, cmd)
 	case profileMenu:
 		newProfile, newCmd := m.views[int(profileMenu)].Update(msg)
 		profileMenuModel, ok := newProfile.(ProfileMenu)
@@ -114,7 +115,6 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.views[int(profileMenu)] = profileMenuModel
 		cmd = newCmd
-		cmds = append(cmds, cmd)
 	case s3Menu:
 		newS3, newCmd := m.views[int(s3Menu)].Update(msg)
 		s3MenuModel, ok := newS3.(S3Menu)
@@ -123,7 +123,6 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.views[int(s3Menu)] = s3MenuModel
 		cmd = newCmd
-		cmds = append(cmds, cmd)
 	}
 
 	cmds = append(cmds, cmd)
@@ -155,11 +154,7 @@ func (m TUI) View() string {
 		menu += m.views[int(s3Menu)].View()
 	}
 
-	if m.statusBar != "" {
-		menu += "\n" + StatusBarStyle(m.statusBar) + "\n"
-	} else if m.err != nil {
-		menu += "\n" + StatusBarErrorStyle(m.err.Error())
-	}
+	menu += "\n" + m.statusBar.View()
 
 	helpText := "\n"
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Up.Help()))
