@@ -52,9 +52,10 @@ type S3Menu struct {
 }
 
 type S3MenuMessage struct {
-	loadBuckets bool
-	buckets     []string
-	err         error
+	createBucket bool
+	loadBuckets  bool
+	buckets      []string
+	err          error
 }
 
 func loadBuckets(s3Client *s3.Client) tea.Cmd {
@@ -76,6 +77,23 @@ func loadBuckets(s3Client *s3.Client) tea.Cmd {
 		}
 	}
 }
+
+func createBucket(s3Client *s3.Client) tea.Cmd {
+
+	ctx := context.Background()
+	_, err := s3Client.CreateBucket(ctx, &s3.CreateBucketInput{})
+	message := S3MenuMessage{}
+	if err == nil {
+		message.createBucket = true
+	} else {
+		message.err = err
+	}
+
+	return func() tea.Msg {
+		return message
+	}
+}
+
 func InitS3Menu() S3Menu {
 	// Load buckets on init
 	return S3Menu{
@@ -153,6 +171,13 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, Keymap.Backspace):
 			m.viewObjects = false
 		}
+		switch msg.String() {
+		case "c":
+			// Create bucket logic here
+			// For now, just print a message
+
+		}
+
 	default:
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)

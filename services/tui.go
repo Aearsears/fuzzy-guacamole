@@ -22,9 +22,11 @@ type SwitchMenuMessage struct {
 }
 
 type TUI struct {
-	state   SessionState
-	views   map[int]tea.Model
-	profile string
+	state     SessionState
+	views     map[int]tea.Model
+	profile   string
+	err       error
+	statusBar string
 	// to implement
 	quitting bool
 }
@@ -33,10 +35,12 @@ func InitTUI() TUI {
 	views := make(map[int]tea.Model)
 	views[int(mainMenu)] = InitialMenu()
 	return TUI{
-		state:    mainMenu,
-		views:    views,
-		profile:  "N/A",
-		quitting: false,
+		state:     mainMenu,
+		views:     views,
+		profile:   "N/A",
+		quitting:  false,
+		err:       nil,
+		statusBar: "",
 	}
 }
 
@@ -70,6 +74,11 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// todo: if profile is different, then need to reautehntiate
 		m.state = mainMenu
 		return m, nil
+	case S3MenuMessage:
+		if msg.err != nil {
+			m.err = msg.err
+		}
+
 	case tea.WindowSizeMsg:
 		// todo: implement resize handling
 		WindowSize = msg
@@ -145,6 +154,13 @@ func (m TUI) View() string {
 		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
 		menu += m.views[int(s3Menu)].View()
 	}
+
+	if m.statusBar != "" {
+		menu += "\n" + StatusBarStyle(m.statusBar) + "\n"
+	} else if m.err != nil {
+		menu += "\n" + StatusBarErrorStyle(m.err.Error())
+	}
+
 	helpText := "\n"
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Up.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Down.Help()))
