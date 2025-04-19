@@ -140,7 +140,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.err != nil {
 			m.err = msg.err
 			m.loading = false
-		} else if msg.buckets != nil {
+		} else {
 			m.buckets = msg.buckets
 			m.loading = false
 		}
