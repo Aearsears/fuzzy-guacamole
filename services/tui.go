@@ -130,19 +130,19 @@ func (m TUI) View() string {
 		s := "[AWS] Main Menu"
 		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
 		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
-		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
+		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
 		menu += m.views[int(mainMenu)].View()
 	case profileMenu:
 		s := "[AWS] Profiles"
 		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
 		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
-		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
+		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
 		menu += m.views[int(profileMenu)].View()
 	case s3Menu:
 		s := "[AWS] S3"
 		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
 		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
-		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n\n"
+		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
 		menu += m.views[int(s3Menu)].View()
 	}
 
