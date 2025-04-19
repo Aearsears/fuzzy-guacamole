@@ -14,6 +14,8 @@ require (
 
 require github.com/muesli/reflow v0.3.0
 
+require github.com/atotto/clipboard v0.1.4 // indirect
+
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30 // indirect

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -44,6 +45,7 @@ type MainMenu struct {
 	choices  []MenuItem
 	cursor   int
 	selected map[int]struct{}
+	input    textinput.Model
 }
 
 func InitialMenu() MainMenu {
@@ -54,10 +56,18 @@ func InitialMenu() MainMenu {
 			state: SessionState(i + 1),
 		}
 	}
+
+	input := textinput.New()
+	input.Prompt = "$ "
+	input.Placeholder = ""
+	input.CharLimit = 250
+	input.Width = 50
+
 	return MainMenu{
 		choices:  menuItems,
 		cursor:   0,
 		selected: make(map[int]struct{}),
+		input:    input,
 	}
 }
 
@@ -66,31 +76,54 @@ func (m MainMenu) Init() tea.Cmd {
 }
 
 func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch {
-
-		case key.Matches(msg, Keymap.Up):
-			if m.cursor > 0 {
-				m.cursor--
+		if m.input.Focused() {
+			// filter choices based on input
+			if key.Matches(msg, Keymap.Enter) {
+				m.input.SetValue("")
+				m.input.Blur()
 			}
-
-		case key.Matches(msg, Keymap.Down):
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
+			if key.Matches(msg, Keymap.Backspace) {
+				m.input.SetValue("")
+				m.input.Blur()
 			}
+			// only log keypresses for the input field when it's focused
+			m.input, cmd = m.input.Update(msg)
+			cmds = append(cmds, cmd)
+		} else {
+			switch {
+			case key.Matches(msg, Keymap.Up):
+				if m.cursor > 0 {
+					m.cursor--
+				}
 
-		case key.Matches(msg, Keymap.Enter):
-			selected := m.choices[m.cursor]
-			return m, func() tea.Msg {
-				return SwitchMenuMessage{
-					selected.state}
+			case key.Matches(msg, Keymap.Down):
+				if m.cursor < len(m.choices)-1 {
+					m.cursor++
+				}
+
+			case key.Matches(msg, Keymap.Enter):
+				selected := m.choices[m.cursor]
+				return m, func() tea.Msg {
+					return SwitchMenuMessage{
+						selected.state}
+				}
 			}
+		}
+
+		switch msg.String() {
+		case "/":
+			m.input.Focus()
+			return m, textinput.Blink
 		}
 
 	}
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 func (m MainMenu) View() string {
@@ -156,5 +189,8 @@ func (m MainMenu) View() string {
 	}
 
 	menu := strings.Join(rows, "\n")
+	if m.input.Focused() {
+		menu += "\n" + m.input.View() // Add the input field at the bottom
+	}
 	return BorderStyle.Render(menu)
 }
