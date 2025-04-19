@@ -2,9 +2,11 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type GoBackMessage struct{}
@@ -92,24 +94,67 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m MainMenu) View() string {
-	menu := ""
-	// Iterate over the menu choices
-	for i, choice := range m.choices {
-		// Is the cursor pointing at this choice?
-		cursor := " " // no cursor
-		display := ""
-
-		if m.cursor == i {
-			cursor = CursorStyle(">")                   // cursor!
-			display = SelectedStyle.Render(choice.name) // Highlight the selected choice
-		} else {
-			display = ChoiceStyle(choice.name) // Regular style for unselected choices
-		}
-
-		// Render the row with styles
-		menu += fmt.Sprintf("%s %s\n", cursor, display)
+	// Get available width
+	width := WindowSize.Width
+	if width <= 0 {
+		width = 80 // Default if window size not available
 	}
 
-	return BorderStyle.Render(menu)
+	// Determine number of columns based on width
+	numColumns := 3
+	if width < 60 {
+		numColumns = 1
+	} else if width < 100 {
+		numColumns = 2
+	}
 
+	// Calculate items per column
+	totalItems := len(m.choices)
+	itemsPerCol := (totalItems + numColumns - 1) / numColumns
+
+	// Calculate column width
+	contentWidth := width - 4 // Account for borders
+	colWidth := contentWidth / numColumns
+
+	// Build rows for the layout
+	var rows []string
+
+	for rowIdx := 0; rowIdx < itemsPerCol; rowIdx++ {
+		var rowContent string
+
+		for colIdx := 0; colIdx < numColumns; colIdx++ {
+			// Calculate item index (reading down columns)
+			itemIdx := rowIdx + colIdx*itemsPerCol
+
+			if itemIdx < totalItems {
+				choice := m.choices[itemIdx]
+
+				// Style based on selection
+				cursor := "  " // no cursor
+				display := ""
+				if m.cursor == itemIdx {
+					cursor = CursorStyle("> ")
+					display = SelectedStyle.Render(choice.name)
+				} else {
+					display = ChoiceStyle(choice.name)
+				}
+
+				// Add to row with fixed width
+				item := fmt.Sprintf("%s%s", cursor, display)
+
+				padding := colWidth - lipgloss.Width(item)
+				if padding < 0 {
+					padding = 0
+				}
+				paddedItem := item + strings.Repeat(" ", padding)
+				rowContent += paddedItem
+
+			}
+		}
+
+		rows = append(rows, rowContent)
+	}
+
+	menu := strings.Join(rows, "\n")
+	return BorderStyle.Render(menu)
 }
