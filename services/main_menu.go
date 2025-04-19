@@ -10,7 +10,28 @@ import (
 type GoBackMessage struct{}
 
 // services is a list of AWS services that are supported by the application
-var services = []string{"S3", "Profiles", "DynamoDB", "RDS", "Lambda", "SNS", "SQS", "CloudWatch", "IAM", "EC2"}
+var services = []string{
+	"S3",                // Object storage
+	"Profiles",          // AWS credential profiles
+	"EC2",               // Virtual servers
+	"Lambda",            // Serverless functions
+	"DynamoDB",          // NoSQL database
+	"RDS",               // Relational databases
+	"IAM",               // Identity management
+	"CloudWatch",        // Monitoring and observability
+	"VPC",               // Networking
+	"API Gateway",       // API management
+	"CloudFront",        // Content delivery
+	"Route 53",          // DNS service
+	"ECS",               // Container orchestration
+	"EKS",               // Kubernetes service
+	"SNS",               // Pub/sub messaging
+	"SQS",               // Message queuing
+	"CloudFormation",    // Infrastructure as code
+	"Elastic Beanstalk", // App deployment
+	"Secrets Manager",   // Secrets storage
+	"CodePipeline",      // CI/CD pipeline
+}
 
 type MenuItem struct {
 	name  string
@@ -89,6 +110,6 @@ func (m MainMenu) View() string {
 		menu += fmt.Sprintf("%s %s\n", cursor, display)
 	}
 
-	return menu
+	return BorderStyle.Render(menu)
 
 }

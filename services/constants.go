@@ -64,7 +64,9 @@ var FooterStyle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("8")). // Light grey footer
 	Render
 
-	// Add after FooterStyle
+var BorderStyle = lipgloss.NewStyle().
+	Border(lipgloss.RoundedBorder()).
+	BorderForeground(lipgloss.Color("#5A5A5A")) // Grey border
 
 // StatusBarStyle provides styling for the network activity status bar
 var StatusBarStyle = lipgloss.NewStyle().

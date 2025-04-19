@@ -132,7 +132,7 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m TUI) View() string {
 	menu := ""
-
+	// todo; implement a better way to handle this
 	switch m.state {
 	case mainMenu:
 		s := "[AWS] Main Menu"

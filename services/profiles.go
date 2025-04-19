@@ -98,7 +98,7 @@ func (m ProfileMenu) View() string {
 	}
 
 	// Send the UI for rendering
-	return menu
+	return BorderStyle.Render(menu)
 }
 
 func getProfilesFromFile(path string, isConfig bool) ([]string, error) {
