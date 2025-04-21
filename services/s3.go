@@ -116,11 +116,19 @@ func InitS3Menu() S3Menu {
 
 func (m S3Menu) Init() tea.Cmd {
 	//todo : fix loading spinner
-	return tea.Batch(m.spinner.Tick, func() tea.Msg {
-		return S3MenuMessage{
-			loadBuckets: true,
-		}
-	})
+	// TODO: use async/coroutines
+	// from my understanding, bubble tea used an event loop which processes one message every tick, so when sending S3MenuMessage that will cause a synchronous call to laodbuckets, this will block the event loop and the api message loading buckets wont appear. order of messages is not gauranteed, so we need to use coroutines to process the loading in the background and not block event loop
+	return tea.Batch(m.spinner.Tick,
+		func() tea.Msg {
+			return APIMessage{
+				status: "Loading buckets...",
+			}
+		},
+		func() tea.Msg {
+			return S3MenuMessage{
+				loadBuckets: true,
+			}
+		})
 }
 
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -135,6 +143,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case S3MenuMessage:
 		if msg.loadBuckets {
+			// TODO: use async/coroutines
 			cmds = append(cmds, loadBuckets(m.s3Client))
 		}
 		if msg.err != nil {
@@ -159,6 +168,9 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, Keymap.Enter):
 			// Fetch objects for selected bucket
+			if len(m.buckets) == 0 {
+				return m, nil
+			}
 			bucket := m.buckets[m.selected]
 			ctx := context.Background()
 			resp, err := m.s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{

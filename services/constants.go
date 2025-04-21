@@ -70,25 +70,19 @@ var BorderStyle = lipgloss.NewStyle().
 
 // StatusBarStyle provides styling for the network activity status bar
 var StatusBarStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FFFFFF")). // White text
-	Background(lipgloss.Color("#333333")). // Dark gray background
-	Bold(true).
+	Foreground(lipgloss.Color("#5A5A5A")). // Grey border
 	Align(lipgloss.Left).
 	Render
 
 // StatusBarSuccessStyle indicates successful network operations
 var StatusBarSuccessStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FFFFFF")).
-	Background(lipgloss.Color("#287928")). // Green background
-	Bold(true).
+	Foreground(lipgloss.Color("#0F4D0F")).
 	Align(lipgloss.Left).
 	Render
 
 // StatusBarErrorStyle indicates failed network operations
 var StatusBarErrorStyle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("#FFFFFF")).
-	Background(lipgloss.Color("#a13131")). // Red background
-	Bold(true).
+	Foreground(lipgloss.Color("#bd534b")).
 	Align(lipgloss.Left).
 	Render
 

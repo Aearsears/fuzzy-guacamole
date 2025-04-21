@@ -1,14 +1,17 @@
 package services
 
 import (
+	"strconv"
 	"time"
 
+	"github.com/Aearsears/fuzzy-guacamole/utils"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type APIMessage struct {
 	err      error
 	response string
+	status   string
 }
 type StatusBarTimeoutMessage struct{}
 
@@ -28,7 +31,7 @@ func statusBarTimeout(seconds int) tea.Cmd {
 
 func InitStatusBar() StatusBar {
 	return StatusBar{
-		timeout: 10,
+		timeout: 5,
 		loading: false,
 	}
 }
@@ -40,12 +43,21 @@ func (m StatusBar) Init() tea.Cmd {
 func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case APIMessage:
+		// todo: how to timeout multiple messsages at a time?
 		m.display = true
-		if msg.err != nil {
+		if msg.status != "" {
+			m.display_text = msg.status
+			m.loading = true
+			utils.Debug("HERE")
+			utils.Debug(m.display_text + " " + msg.status)
+			return m, nil
+		} else if msg.err != nil {
 			m.err = msg.err
 			m.display_text = m.err.Error()
-		} else {
+			m.loading = false
+		} else if msg.response != "" {
 			m.display_text = msg.response
+			m.loading = false
 		}
 		return m, statusBarTimeout(m.timeout)
 
@@ -58,7 +70,12 @@ func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m StatusBar) View() string {
 	if m.display {
-		if m.err != nil {
+		if m.loading {
+			utils.Debug("HERE in view function")
+			utils.Debug(m.display_text)
+			utils.Debug(strconv.FormatBool(m.display))
+			return StatusBarStyle(m.display_text)
+		} else if m.err != nil {
 			return StatusBarErrorStyle(m.err.Error())
 		} else {
 			return StatusBarSuccessStyle(m.display_text)
