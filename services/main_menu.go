@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -42,10 +43,12 @@ type MenuItem struct {
 }
 
 type MainMenu struct {
-	choices  []MenuItem
-	cursor   int
-	selected map[int]struct{}
-	input    textinput.Model
+	choices         []MenuItem
+	filteredChoices []MenuItem
+	filterValue     string
+	cursor          int
+	selected        map[int]struct{}
+	input           textinput.Model
 }
 
 func InitialMenu() MainMenu {
@@ -64,10 +67,12 @@ func InitialMenu() MainMenu {
 	input.Width = 50
 
 	return MainMenu{
-		choices:  menuItems,
-		cursor:   0,
-		selected: make(map[int]struct{}),
-		input:    input,
+		choices:         menuItems,
+		filteredChoices: menuItems,
+		cursor:          0,
+		selected:        make(map[int]struct{}),
+		input:           input,
+		filterValue:     "",
 	}
 }
 
@@ -84,10 +89,29 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.input.Focused() {
 			// filter choices based on input
 			if key.Matches(msg, Keymap.Enter) {
+				m.filterValue = m.input.Value()
+
+				if m.filterValue != "" {
+					var filtered []MenuItem
+					re, err := regexp.Compile("(?i)" + m.filterValue) // Case-insensitive
+					if err == nil {
+						for _, c := range m.choices {
+							if re.MatchString(c.name) {
+								filtered = append(filtered, c)
+							}
+						}
+						m.filteredChoices = filtered
+					}
+					m.cursor = 0 // Reset cursor when filtering
+				} else {
+					m.filteredChoices = m.choices
+				}
 				m.input.SetValue("")
 				m.input.Blur()
 			}
 			if key.Matches(msg, Keymap.Backspace) {
+				m.filterValue = ""
+				m.filteredChoices = m.choices
 				m.input.SetValue("")
 				m.input.Blur()
 			}
@@ -107,7 +131,12 @@ func (m MainMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case key.Matches(msg, Keymap.Enter):
-				selected := m.choices[m.cursor]
+				if len(m.filteredChoices) == 0 {
+					return m, nil // No choices to select from
+
+				}
+
+				selected := m.filteredChoices[m.cursor]
 				return m, func() tea.Msg {
 					return SwitchMenuMessage{
 						selected.state}
@@ -142,7 +171,7 @@ func (m MainMenu) View() string {
 	}
 
 	// Calculate items per column
-	totalItems := len(m.choices)
+	totalItems := len(m.filteredChoices)
 	itemsPerCol := (totalItems + numColumns - 1) / numColumns
 
 	// Calculate column width
@@ -160,7 +189,7 @@ func (m MainMenu) View() string {
 			itemIdx := rowIdx + colIdx*itemsPerCol
 
 			if itemIdx < totalItems {
-				choice := m.choices[itemIdx]
+				choice := m.filteredChoices[itemIdx]
 
 				// Style based on selection
 				cursor := "  " // no cursor
@@ -188,7 +217,12 @@ func (m MainMenu) View() string {
 		rows = append(rows, rowContent)
 	}
 
-	menu := strings.Join(rows, "\n")
+	menu := ""
+	if len(rows) == 0 {
+		rows = append(rows, DocStyle("No services available."))
+	}
+	menu = strings.Join(rows, "\n")
+
 	if m.input.Focused() {
 		menu += "\n" + m.input.View() // Add the input field at the bottom
 	}
