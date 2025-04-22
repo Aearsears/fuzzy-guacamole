@@ -6,7 +6,6 @@ import (
 	"log"
 	"strings"
 
-	"github.com/Aearsears/fuzzy-guacamole/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -70,7 +69,6 @@ func loadBuckets(s3Client *s3.Client) tea.Cmd {
 			}
 
 		}
-		utils.Debug("in loading bucketus")
 		return S3MenuMessage{
 			buckets:     names,
 			err:         err,
@@ -110,11 +108,7 @@ func InitS3Menu() S3Menu {
 
 func (m S3Menu) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick,
-		func() tea.Msg {
-			return S3MenuMessage{
-				loadBuckets: true,
-			}
-		},
+		loadBuckets(m.s3Client),
 		func() tea.Msg {
 			return APIMessage{
 				status: "Loading buckets...",
@@ -134,9 +128,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case S3MenuMessage:
-		if msg.loadBuckets {
-			cmds = append(cmds, loadBuckets(m.s3Client))
-		} else if msg.err != nil {
+		if msg.err != nil {
 			m.err = msg.err
 			m.loading = false
 			cmds = append(cmds, func() tea.Msg {
