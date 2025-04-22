@@ -1,10 +1,8 @@
 package services
 
 import (
-	"strconv"
 	"time"
 
-	"github.com/Aearsears/fuzzy-guacamole/utils"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -48,8 +46,6 @@ func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.status != "" {
 			m.display_text = msg.status
 			m.loading = true
-			utils.Debug("HERE")
-			utils.Debug(m.display_text + " " + msg.status)
 			return m, nil
 		} else if msg.err != nil {
 			m.err = msg.err
@@ -71,9 +67,6 @@ func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m StatusBar) View() string {
 	if m.display {
 		if m.loading {
-			utils.Debug("HERE in view function")
-			utils.Debug(m.display_text)
-			utils.Debug(strconv.FormatBool(m.display))
 			return StatusBarStyle(m.display_text)
 		} else if m.err != nil {
 			return StatusBarErrorStyle(m.err.Error())

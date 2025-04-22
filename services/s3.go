@@ -6,6 +6,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/Aearsears/fuzzy-guacamole/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -59,30 +60,23 @@ type S3MenuMessage struct {
 }
 
 func loadBuckets(s3Client *s3.Client) tea.Cmd {
+	return func() tea.Msg {
+		ctx := context.Background()
+		resp, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
+		var names []string
+		if err == nil {
+			for _, b := range resp.Buckets {
+				names = append(names, *b.Name)
+			}
 
-	ctx := context.Background()
-	resp, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
-	var names []string
-	var resp_str string
-	if err == nil {
-		for _, b := range resp.Buckets {
-			names = append(names, *b.Name)
 		}
-		resp_str = fmt.Sprintf("S3: Listed %d buckets successfully", len(resp.Buckets))
-
-	}
-
-	return tea.Batch(func() tea.Msg {
+		utils.Debug("in loading bucketus")
 		return S3MenuMessage{
 			buckets:     names,
 			err:         err,
-			loadBuckets: false,
-		}
-	}, func() tea.Msg {
-		return APIMessage{
-			err:      err,
-			response: resp_str}
-	})
+			loadBuckets: false}
+	}
+
 }
 
 func createBucket(s3Client *s3.Client) tea.Cmd {
@@ -115,20 +109,18 @@ func InitS3Menu() S3Menu {
 }
 
 func (m S3Menu) Init() tea.Cmd {
-	//todo : fix loading spinner
-	// TODO: use async/coroutines
-	// from my understanding, bubble tea used an event loop which processes one message every tick, so when sending S3MenuMessage that will cause a synchronous call to laodbuckets, this will block the event loop and the api message loading buckets wont appear. order of messages is not gauranteed, so we need to use coroutines to process the loading in the background and not block event loop
 	return tea.Batch(m.spinner.Tick,
+		func() tea.Msg {
+			return S3MenuMessage{
+				loadBuckets: true,
+			}
+		},
 		func() tea.Msg {
 			return APIMessage{
 				status: "Loading buckets...",
 			}
 		},
-		func() tea.Msg {
-			return S3MenuMessage{
-				loadBuckets: true,
-			}
-		})
+	)
 }
 
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -143,15 +135,24 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case S3MenuMessage:
 		if msg.loadBuckets {
-			// TODO: use async/coroutines
 			cmds = append(cmds, loadBuckets(m.s3Client))
-		}
-		if msg.err != nil {
+		} else if msg.err != nil {
 			m.err = msg.err
 			m.loading = false
+			cmds = append(cmds, func() tea.Msg {
+				return APIMessage{
+					err: m.err,
+				}
+			})
+
 		} else {
 			m.buckets = msg.buckets
 			m.loading = false
+			cmds = append(cmds, func() tea.Msg {
+				return APIMessage{
+					status: fmt.Sprintf("S3: Listed %d buckets successfully", len(m.buckets)),
+				}
+			})
 		}
 
 	case tea.KeyMsg:
@@ -196,10 +197,6 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// For now, just print a message
 
 		}
-
-	default:
-		m.spinner, cmd = m.spinner.Update(msg)
-		cmds = append(cmds, cmd)
 
 	}
 	return m, tea.Batch(cmds...)
