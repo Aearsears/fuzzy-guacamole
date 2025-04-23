@@ -3,6 +3,7 @@ package services
 import (
 	"fmt"
 
+	"github.com/Aearsears/fuzzy-guacamole/internal"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -72,7 +73,7 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// todo: if profile is different, then need to reautehntiate
 		m.state = mainMenu
 		return m, nil
-	case APIMessage, StatusBarTimeoutMessage:
+	case internal.APIMessage, StatusBarTimeoutMessage:
 		newStatusBar, newCmd := m.statusBar.Update(msg)
 		statusBar, ok := newStatusBar.(StatusBar)
 		if !ok {

@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/charmbracelet/bubbles/spinner"
 
+	"github.com/Aearsears/fuzzy-guacamole/internal"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -51,13 +52,6 @@ type S3Menu struct {
 	spinner     spinner.Model
 }
 
-type S3MenuMessage struct {
-	createBucket bool
-	loadBuckets  bool
-	buckets      []string
-	err          error
-}
-
 func loadBuckets(s3Client *s3.Client) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
@@ -69,10 +63,12 @@ func loadBuckets(s3Client *s3.Client) tea.Cmd {
 			}
 
 		}
-		return S3MenuMessage{
-			buckets:     names,
-			err:         err,
-			loadBuckets: false}
+		return internal.S3MenuMessage{
+			Buckets: names,
+			APIMessage: internal.APIMessage{
+				Err: err,
+			},
+			LoadBuckets: false}
 	}
 
 }
@@ -81,11 +77,11 @@ func createBucket(s3Client *s3.Client) tea.Cmd {
 
 	ctx := context.Background()
 	_, err := s3Client.CreateBucket(ctx, &s3.CreateBucketInput{})
-	message := S3MenuMessage{}
+	message := internal.S3MenuMessage{}
 	if err == nil {
-		message.createBucket = true
+		message.CreateBucket = true
 	} else {
-		message.err = err
+		message.APIMessage.Err = err
 	}
 
 	return func() tea.Msg {
@@ -110,8 +106,8 @@ func (m S3Menu) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick,
 		loadBuckets(m.s3Client),
 		func() tea.Msg {
-			return APIMessage{
-				status: "Loading buckets...",
+			return internal.APIMessage{
+				Status: "Loading buckets...",
 			}
 		},
 	)
@@ -127,22 +123,22 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 
-	case S3MenuMessage:
-		if msg.err != nil {
-			m.err = msg.err
+	case internal.S3MenuMessage:
+		if msg.APIMessage.Err != nil {
+			m.err = msg.APIMessage.Err
 			m.loading = false
 			cmds = append(cmds, func() tea.Msg {
-				return APIMessage{
-					err: m.err,
+				return internal.APIMessage{
+					Err: m.err,
 				}
 			})
 
 		} else {
-			m.buckets = msg.buckets
+			m.buckets = msg.Buckets
 			m.loading = false
 			cmds = append(cmds, func() tea.Msg {
-				return APIMessage{
-					status: fmt.Sprintf("S3: Listed %d buckets successfully", len(m.buckets)),
+				return internal.APIMessage{
+					Status: fmt.Sprintf("S3: Listed %d buckets successfully", len(m.buckets)),
 				}
 			})
 		}

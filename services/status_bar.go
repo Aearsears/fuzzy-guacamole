@@ -3,14 +3,10 @@ package services
 import (
 	"time"
 
+	"github.com/Aearsears/fuzzy-guacamole/internal"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type APIMessage struct {
-	err      error
-	response string
-	status   string
-}
 type StatusBarTimeoutMessage struct{}
 
 type StatusBar struct {
@@ -40,19 +36,19 @@ func (m StatusBar) Init() tea.Cmd {
 
 func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case APIMessage:
+	case internal.APIMessage:
 		// todo: how to timeout multiple messsages at a time?
 		m.display = true
-		if msg.status != "" {
-			m.display_text = msg.status
+		if msg.Status != "" {
+			m.display_text = msg.Status
 			m.loading = true
 			return m, nil
-		} else if msg.err != nil {
-			m.err = msg.err
+		} else if msg.Err != nil {
+			m.err = msg.Err
 			m.display_text = m.err.Error()
 			m.loading = false
-		} else if msg.response != "" {
-			m.display_text = msg.response
+		} else if msg.Response != "" {
+			m.display_text = msg.Response
 			m.loading = false
 		}
 		return m, statusBarTimeout(m.timeout)
