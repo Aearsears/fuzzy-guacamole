@@ -1,23 +1,28 @@
-package internal
+package utils
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/Aearsears/fuzzy-guacamole/internal"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // wrapper for function to be called in a tea.cmd
-func Wrapper(fn func() (*s3.PutObjectOutput, error)) tea.Cmd {
-
+func Wrapper(fn func() (any, error)) tea.Cmd {
 	return func() tea.Msg {
-		res, err := fn()
-		return MyMessage{
-			buckets:     names,
-			err:         err,
-			loadBuckets: false}
+		output, err := fn()
+		// maybe could do client.newMessage for each client's specific message type
+		return internal.APIMessage{
+			Response: FormatMetadata(output),
+			Err:      err,
+		}
 	}
+}
+
+// todo: check types
+func FormatMetadata(meta smithyhttp.ResponseMetadata) string {
+	return fmt.Sprintf("Request ID: %s, Status: %d", meta.RequestID, meta.HTTPStatusCode)
 }
 
 func Debug(msg string) {
