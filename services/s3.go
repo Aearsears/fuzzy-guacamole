@@ -1,18 +1,14 @@
 package services
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/charmbracelet/bubbles/spinner"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
+	"github.com/Aearsears/fuzzy-guacamole/internal/s3"
+	"github.com/Aearsears/fuzzy-guacamole/internal/utils"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -46,47 +42,10 @@ type S3Menu struct {
 	selected    int
 	viewObjects bool
 	objects     []string
-	s3Client    *s3.Client
+	s3Client    s3.S3API
 	err         error
 	loading     bool
 	spinner     spinner.Model
-}
-
-func loadBuckets(s3Client *s3.Client) tea.Cmd {
-	return func() tea.Msg {
-		ctx := context.Background()
-		resp, err := s3Client.ListBuckets(ctx, &s3.ListBucketsInput{})
-		var names []string
-		if err == nil {
-			for _, b := range resp.Buckets {
-				names = append(names, *b.Name)
-			}
-
-		}
-		return internal.S3MenuMessage{
-			Buckets: names,
-			APIMessage: internal.APIMessage{
-				Err: err,
-			},
-			LoadBuckets: false}
-	}
-
-}
-
-func createBucket(s3Client *s3.Client) tea.Cmd {
-
-	ctx := context.Background()
-	_, err := s3Client.CreateBucket(ctx, &s3.CreateBucketInput{})
-	message := internal.S3MenuMessage{}
-	if err == nil {
-		message.CreateBucket = true
-	} else {
-		message.APIMessage.Err = err
-	}
-
-	return func() tea.Msg {
-		return message
-	}
 }
 
 func InitS3Menu() S3Menu {
@@ -104,7 +63,8 @@ func InitS3Menu() S3Menu {
 
 func (m S3Menu) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick,
-		loadBuckets(m.s3Client),
+		m.s3Client.ListBuckets(ctx,
+			&s3.ListBucketsInput{}),
 		func() tea.Msg {
 			return internal.APIMessage{
 				Status: "Loading buckets...",
@@ -123,7 +83,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 
-	case internal.S3MenuMessage:
+	case s3.S3MenuMessage:
 		if msg.APIMessage.Err != nil {
 			m.err = msg.APIMessage.Err
 			m.loading = false
@@ -157,25 +117,25 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, Keymap.Enter):
 			// Fetch objects for selected bucket
-			if len(m.buckets) == 0 {
-				return m, nil
-			}
-			bucket := m.buckets[m.selected]
-			ctx := context.Background()
-			resp, err := m.s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-				Bucket:  aws.String(bucket),
-				MaxKeys: aws.Int32(10),
-			})
-			// TODO: handle error in right side pane
-			if err != nil {
-				m.err = err
-			}
-			var objs []string
-			for _, obj := range resp.Contents {
-				objs = append(objs, fmt.Sprintf("%s (%d bytes)", *obj.Key, obj.Size))
-			}
-			m.viewObjects = true
-			m.objects = objs
+			// if len(m.buckets) == 0 {
+			// 	return m, nil
+			// }
+			// bucket := m.buckets[m.selected]
+			// ctx := context.Background()
+			// resp, err := m.s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			// 	Bucket:  aws.String(bucket),
+			// 	MaxKeys: aws.Int32(10),
+			// })
+			// // TODO: handle error in right side pane
+			// if err != nil {
+			// 	m.err = err
+			// }
+			// var objs []string
+			// for _, obj := range resp.Contents {
+			// 	objs = append(objs, fmt.Sprintf("%s (%d bytes)", *obj.Key, obj.Size))
+			// }
+			// m.viewObjects = true
+			// m.objects = objs
 		case key.Matches(msg, Keymap.Backspace):
 			m.viewObjects = false
 		}
@@ -237,37 +197,6 @@ func (m S3Menu) View() string {
 	)
 }
 
-func createS3Client() *s3.Client {
-	// Endpoint: http://localhost:4566
-	// Region: us-east-1
-	// Access key: test
-	// Secret key: test
-	// Custom endpoint resolver
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		if service == s3.ServiceID {
-			return aws.Endpoint{
-				URL:           "http://localhost:4566", // LocalStack endpoint
-				SigningRegion: "us-east-1",
-			}, nil
-		}
-		return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
-	})
-	staticCreds := aws.NewCredentialsCache(
-		credentials.NewStaticCredentialsProvider("test", "test", ""),
-	)
-	// Load config with custom resolver
-	cfg, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithRegion("us-east-1"),
-		config.WithCredentialsProvider(staticCreds),
-		config.WithEndpointResolverWithOptions(customResolver),
-	)
-	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
-	}
-
-	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String("http://localhost:4566")
-		o.UsePathStyle = true
-	})
-	return s3Client
+func createS3Client() s3.S3API {
+	return utils.ClientFactory("s3")
 }

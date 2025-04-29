@@ -1,29 +1,67 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
 
-	"github.com/Aearsears/fuzzy-guacamole/internal"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// wrapper for function to be called in a tea.cmd
-func Wrapper(fn func() (any, error)) tea.Cmd {
-	return func() tea.Msg {
-		output, err := fn()
-		// maybe could do client.newMessage for each client's specific message type
-		return internal.APIMessage{
-			Response: FormatMetadata(output),
-			Err:      err,
+type Client interface {
+	Wrapper(func() (any, error)) tea.Cmd
+	NewMessage() any
+}
+
+func ClientFactory(clientType string) Client {
+	if clientType == "s3" {
+		// Endpoint: http://localhost:4566
+		// Region: us-east-1
+		// Access key: test
+		// Secret key: test
+		// Custom endpoint resolver
+		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+			if service == s3.ServiceID {
+				return aws.Endpoint{
+					URL:           "http://localhost:4566", // LocalStack endpoint
+					SigningRegion: "us-east-1",
+				}, nil
+			}
+			return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
+		})
+		staticCreds := aws.NewCredentialsCache(
+			credentials.NewStaticCredentialsProvider("test", "test", ""),
+		)
+		// Load config with custom resolver
+		cfg, err := config.LoadDefaultConfig(context.TODO(),
+			config.WithRegion("us-east-1"),
+			config.WithCredentialsProvider(staticCreds),
+			config.WithEndpointResolverWithOptions(customResolver),
+		)
+		if err != nil {
+			log.Fatalf("unable to load SDK config, %v", err)
 		}
+
+		s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+			o.BaseEndpoint = aws.String("http://localhost:4566")
+			o.UsePathStyle = true
+		})
+		return &s3.S3Client{s3Client: s3Client}
+
 	}
+
+	return nil
 }
 
 // todo: check types
-func FormatMetadata(meta smithyhttp.ResponseMetadata) string {
-	return fmt.Sprintf("Request ID: %s, Status: %d", meta.RequestID, meta.HTTPStatusCode)
-}
+// func FormatMetadata(meta smithyhttp.ResponseMetadata) string {
+// 	return fmt.Sprintf("Request ID: %s, Status: %d", meta.RequestID, meta.HTTPStatusCode)
+// }
 
 func Debug(msg string) {
 	f, err := tea.LogToFile("debug.log", "debug")

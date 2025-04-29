@@ -2,13 +2,6 @@ package internal
 
 type APIMessage struct {
 	Err      error
-	Response string
+	Response any
 	Status   string
-}
-
-type S3MenuMessage struct {
-	APIMessage   APIMessage
-	CreateBucket bool
-	LoadBuckets  bool
-	Buckets      []string
 }

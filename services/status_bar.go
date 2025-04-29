@@ -48,7 +48,11 @@ func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.display_text = m.err.Error()
 			m.loading = false
 		} else if msg.Response != "" {
-			m.display_text = msg.Response
+			if response, ok := msg.Response.(string); ok {
+				m.display_text = response
+			} else {
+				m.display_text = "Invalid response type"
+			}
 			m.loading = false
 		}
 		return m, statusBarTimeout(m.timeout)
