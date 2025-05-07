@@ -8,15 +8,12 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"gopkg.in/ini.v1"
 )
 
 type ProfileMenu struct {
 	profiles        []string
-	spinner         spinner.Model
 	cursor          int
 	selectedProfile string
 }
@@ -31,21 +28,16 @@ func InitProfileMenu() ProfileMenu {
 		profiles = append(profiles, key)
 	}
 
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-
 	return ProfileMenu{
 		profiles:        profiles,
 		cursor:          0,
 		selectedProfile: "",
-		spinner:         s,
 	}
 }
 
 func (m ProfileMenu) Init() tea.Cmd {
 	// todo: perform io loading in here
-	return m.spinner.Tick
+	return nil
 }
 func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -72,13 +64,11 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	var cmd tea.Cmd
-	m.spinner, cmd = m.spinner.Update(msg)
-	return m, cmd
+	return m, nil
 }
 func (m ProfileMenu) View() string {
 	// The header
-	menu := fmt.Sprintf("Available AWS Profiles %s \n\n", m.spinner.View())
+	menu := fmt.Sprintf("Available AWS Profiles  \n\n")
 
 	// Iterate over our choices
 	for i, choice := range m.profiles {
