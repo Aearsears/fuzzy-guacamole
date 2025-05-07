@@ -64,6 +64,12 @@ func ClientFactory(clientType string) Client {
 // 	return fmt.Sprintf("Request ID: %s, Status: %d", meta.RequestID, meta.HTTPStatusCode)
 // }
 
+// wrapper helper function to send messages
+func SendMessage(msg tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		return msg
+	}
+}
 func Debug(msg string) {
 	f, err := tea.LogToFile("debug.log", "debug")
 	if err != nil {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
+	"github.com/Aearsears/fuzzy-guacamole/internal/utils"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -26,6 +28,7 @@ type TUI struct {
 	state     SessionState
 	views     map[int]tea.Model
 	profile   string
+	config    aws.Config
 	statusBar StatusBar
 	// to implement
 	quitting bool
@@ -69,10 +72,27 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 	case ProfileMenuMessage:
-		m.profile = msg.profile
-		// todo: if profile is different, then need to reautehntiate
+		if m.profile != msg.profile {
+			m.profile = msg.profile
+			m.config = msg.config
+			// if err != nil {
+			// 	mssg := internal.APIMessage{
+			// 		Err: err,
+			// 	}
+			// 	return m, func() tea.Msg {
+			// 		return mssg
+			// 	}
+			// } else {
+			// 	m.config = cfg
+			// }
+
+		}
 		m.state = mainMenu
-		return m, nil
+		// todo: if profile is different, then need to refresh all clients
+		return m, utils.SendMessage(internal.APIMessage{
+			Status: fmt.Sprintf("Profile changed to %s", m.profile),
+		})
+
 	case internal.APIMessage, StatusBarTimeoutMessage:
 		newStatusBar, newCmd := m.statusBar.Update(msg)
 		statusBar, ok := newStatusBar.(StatusBar)

@@ -42,7 +42,6 @@ func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Status != "" {
 			m.display_text = msg.Status
 			m.loading = true
-			return m, nil
 		} else if msg.Err != nil {
 			m.err = msg.Err
 			m.display_text = m.err.Error()

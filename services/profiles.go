@@ -1,14 +1,18 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"gopkg.in/ini.v1"
 )
 
@@ -16,9 +20,11 @@ type ProfileMenu struct {
 	profiles        []string
 	cursor          int
 	selectedProfile string
+	config          aws.Config
 }
 type ProfileMenuMessage struct {
 	profile string
+	config  aws.Config
 }
 
 func InitProfileMenu() ProfileMenu {
@@ -56,10 +62,21 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, Keymap.Enter):
-			m.selectedProfile = m.profiles[m.cursor]
+			if m.selectedProfile != m.profiles[m.cursor] {
+				m.selectedProfile = m.profiles[m.cursor]
+				//todo: handle error
+				cfg, _ := config.LoadDefaultConfig(context.Background(), config.WithSharedConfigProfile(m.selectedProfile))
+				m.config = cfg
+				return m, func() tea.Msg {
+					return ProfileMenuMessage{
+						profile: m.selectedProfile,
+						config:  cfg}
+				}
+			}
+
 			return m, func() tea.Msg {
 				return ProfileMenuMessage{
-					m.selectedProfile}
+					profile: m.selectedProfile}
 			}
 		}
 	}
@@ -67,8 +84,24 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 func (m ProfileMenu) View() string {
-	// The header
-	menu := fmt.Sprintf("Available AWS Profiles  \n\n")
+
+	var (
+		leftPanel = lipgloss.NewStyle().
+				Width(30).
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#5A5A5A")).
+				MaxWidth(100)
+
+		rightPanel = lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				BorderForeground(lipgloss.Color("#5A5A5A")).
+				MaxWidth(100)
+
+		flexLayout = lipgloss.NewStyle().
+				Align(lipgloss.Left)
+	)
+	var left strings.Builder
+	left.WriteString(fmt.Sprintf("Available AWS Profiles  \n\n"))
 
 	// Iterate over our choices
 	for i, choice := range m.profiles {
@@ -84,11 +117,22 @@ func (m ProfileMenu) View() string {
 		}
 
 		// Render the row with styles
-		menu += fmt.Sprintf("%s %s\n", cursor, display)
+		left.WriteString(fmt.Sprintf("%s %s\n", cursor, display))
 	}
 
-	// Send the UI for rendering
-	return BorderStyle.Render(menu)
+	var right strings.Builder
+	if m.config.Region != "" {
+		right.WriteString(HeaderStyle(fmt.Sprintf("Region: %s", m.config.Region)) + "\n\n")
+	} else {
+		right.WriteString(DocStyle("No selected profile or no region in your configuration.\n"))
+	}
+
+	leftBox := leftPanel.Render(left.String())
+	rightBox := rightPanel.Render(right.String())
+
+	return flexLayout.Render(
+		lipgloss.JoinHorizontal(lipgloss.Top, leftBox, rightBox),
+	)
 }
 
 func getProfilesFromFile(path string, isConfig bool) ([]string, error) {
