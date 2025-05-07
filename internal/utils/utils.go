@@ -80,3 +80,19 @@ func Debug(msg string) {
 
 	f.WriteString(msg + "\n")
 }
+
+// helper function to load AWS config and use default credential chain order
+func LoadAWSConfig(profile string) (aws.Config, error) {
+	opts := []func(*config.LoadOptions) error{}
+
+	if profile != "" {
+		opts = append(opts, config.WithSharedConfigProfile(profile))
+	}
+
+	cfg, err := config.LoadDefaultConfig(context.TODO(), opts...)
+	if err != nil {
+		return aws.Config{}, err
+	}
+
+	return cfg, nil
+}

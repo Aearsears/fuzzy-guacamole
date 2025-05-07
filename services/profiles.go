@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Aearsears/fuzzy-guacamole/internal/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -34,10 +34,14 @@ func InitProfileMenu() ProfileMenu {
 		profiles = append(profiles, key)
 	}
 
+	//todo: handle error
+	cfg, _ := utils.LoadAWSConfig("")
+
 	return ProfileMenu{
 		profiles:        profiles,
 		cursor:          0,
 		selectedProfile: "",
+		config:          cfg,
 	}
 }
 
@@ -65,7 +69,13 @@ func (m ProfileMenu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.selectedProfile != m.profiles[m.cursor] {
 				m.selectedProfile = m.profiles[m.cursor]
 				//todo: handle error
-				cfg, _ := config.LoadDefaultConfig(context.Background(), config.WithSharedConfigProfile(m.selectedProfile))
+				cfg, _ := utils.LoadAWSConfig(m.selectedProfile)
+				// if strings.Contains(err.Error(), "token has expired") {
+				// 	fmt.Println("Your SSO session has expired. Please run:")
+				// 	fmt.Println("  aws sso login --profile my-sso-profile")
+				// } else {
+				// 	fmt.Println("Error loading config:", err)
+				// }
 				m.config = cfg
 				return m, func() tea.Msg {
 					return ProfileMenuMessage{
@@ -126,6 +136,12 @@ func (m ProfileMenu) View() string {
 	} else {
 		right.WriteString(DocStyle("No selected profile or no region in your configuration.\n"))
 	}
+	creds, err := m.config.Credentials.Retrieve(context.TODO())
+	if err != nil {
+		log.Fatal("Unable to retrieve credentials:", err)
+	}
+
+	right.WriteString(HeaderStyle(fmt.Sprintf("Provider used: %s", creds.Source)) + "\n\n")
 
 	leftBox := leftPanel.Render(left.String())
 	rightBox := rightPanel.Render(right.String())
