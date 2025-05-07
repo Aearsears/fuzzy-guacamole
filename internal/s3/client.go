@@ -10,7 +10,7 @@ import (
 )
 
 type S3Client struct {
-	client *s3.Client
+	Client *s3.Client
 }
 
 type S3MenuMessage struct {
@@ -29,15 +29,16 @@ func (c *S3Client) NewMessage() S3MenuMessage {
 	}
 }
 
-func (c *S3Client) Wrapper(fn func() any) tea.Cmd {
+func (c *S3Client) Wrapper(fn func() (any, error)) tea.Cmd {
 	return func() tea.Msg {
-		return fn()
+		a, _ := fn()
+		return a
 	}
 }
 
 func (c *S3Client) ListBuckets(ctx context.Context, input *s3.ListBucketsInput) tea.Cmd {
-	return c.Wrapper(func() any {
-		output, err := c.client.ListBuckets(ctx, input)
+	return c.Wrapper(func() (any, error) {
+		output, err := c.Client.ListBuckets(ctx, input)
 		mssg := c.NewMessage()
 		mssg.APIMessage = internal.APIMessage{
 			Response: output,
@@ -53,7 +54,7 @@ func (c *S3Client) ListBuckets(ctx context.Context, input *s3.ListBucketsInput) 
 		}
 		mssg.Buckets = names
 		mssg.LoadBuckets = false
-		return mssg
+		return mssg, err
 	})
 }
 

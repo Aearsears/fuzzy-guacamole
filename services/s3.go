@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/Aearsears/fuzzy-guacamole/internal"
 	"github.com/Aearsears/fuzzy-guacamole/internal/s3"
 	"github.com/Aearsears/fuzzy-guacamole/internal/utils"
+	s3aws "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -63,8 +65,8 @@ func InitS3Menu() S3Menu {
 
 func (m S3Menu) Init() tea.Cmd {
 	return tea.Batch(m.spinner.Tick,
-		m.s3Client.ListBuckets(ctx,
-			&s3.ListBucketsInput{}),
+		m.s3Client.ListBuckets(context.Background(),
+			&s3aws.ListBucketsInput{}),
 		func() tea.Msg {
 			return internal.APIMessage{
 				Status: "Loading buckets...",
@@ -198,5 +200,9 @@ func (m S3Menu) View() string {
 }
 
 func createS3Client() s3.S3API {
-	return utils.ClientFactory("s3")
+	client, ok := utils.ClientFactory("s3").(s3.S3API)
+	if !ok {
+		panic("utils.ClientFactory(\"s3\") does not implement s3.S3API")
+	}
+	return client
 }
