@@ -13,6 +13,7 @@ import (
 	"github.com/Aearsears/fuzzy-guacamole/internal/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	s3aws "github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -42,7 +43,7 @@ var (
 )
 
 type S3Menu struct {
-	buckets        []string
+	buckets        []types.Bucket
 	selected       int
 	selectedBucket string
 	viewObjects    bool
@@ -167,7 +168,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case key.Matches(msg, Keymap.Enter):
 				if len(m.buckets) != 0 {
-					m.selectedBucket = m.buckets[m.selected]
+					m.selectedBucket = *m.buckets[m.selected].Name
 					ctx := context.Background()
 					cmds = append(cmds,
 						m.s3Client.ListObjects(ctx,
@@ -205,16 +206,24 @@ func (m S3Menu) View() string {
 	} else if len(m.buckets) == 0 {
 		left.WriteString(DocStyle("No buckets found.\n"))
 	} else {
-
-		for i, name := range m.buckets {
+		//todo create column for creation date and region
+		for i, bucket := range m.buckets {
 			cursor := " "
 			display := ""
+
+			if bucket.BucketRegion == nil {
+				display = fmt.Sprintf("%s %s", *bucket.Name, bucket.CreationDate.Format("2006-01-02"))
+			} else {
+				display = fmt.Sprintf("%s %s %s", *bucket.Name, *bucket.BucketRegion, bucket.CreationDate.Format("2006-01-02"))
+			}
+
 			if i == m.selected {
 				cursor = CursorStyle(">")
-				display = SelectedStyle.Render(name)
+				display = SelectedStyle.Render(display)
 			} else {
-				display = ChoiceStyle(name)
+				display = ChoiceStyle(display)
 			}
+
 			left.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
 		}
 	}

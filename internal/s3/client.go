@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
-
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -26,8 +26,8 @@ const (
 type S3MenuMessage struct {
 	Op         S3OperationType
 	APIMessage internal.APIMessage
-	Buckets    []string // for ListBuckets
-	Objects    []string // for ListObjects
+	Buckets    []types.Bucket // for ListBuckets
+	Objects    []string       // for ListObjects
 	Bucket     string
 }
 
@@ -55,14 +55,7 @@ func (c *S3Client) ListBuckets(ctx context.Context, input *s3.ListBucketsInput) 
 		}
 		mssg.Op = S3OpListBuckets
 
-		var names []string
-		if err == nil {
-			for _, b := range output.Buckets {
-				names = append(names, *b.Name)
-			}
-
-		}
-		mssg.Buckets = names
+		mssg.Buckets = output.Buckets
 		return mssg, err
 	})
 }
