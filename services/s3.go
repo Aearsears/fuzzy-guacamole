@@ -83,6 +83,7 @@ func (m S3Menu) Init() tea.Cmd {
 	)
 }
 
+// todo: get, put and delete objects
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
@@ -170,14 +171,15 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							&s3aws.ListObjectsV2Input{Bucket: aws.String(m.selectedBucket),
 								MaxKeys: aws.Int32(10)}))
 				}
+
+			case key.Matches(msg, Keymap.Create):
+				m.input.Focus()
+				cmds = append(cmds, textinput.Blink)
+
 			case key.Matches(msg, Keymap.Backspace):
 				m.viewObjects = false
 			}
 			switch msg.String() {
-			case "c":
-				m.input.Focus()
-				cmds = append(cmds, textinput.Blink)
-
 			case "r":
 				cmds = append(cmds,
 					m.s3Client.ListBuckets(context.Background(),
