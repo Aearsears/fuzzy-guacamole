@@ -215,6 +215,7 @@ func (m S3Menu) View() string {
 	}
 
 	var right strings.Builder
+	// would be cool if could view objects like a tree from left to right
 	if m.viewObjects {
 		right.WriteString(HeaderStyle(fmt.Sprintf("Objects in: %s", m.selectedBucket)) + "\n\n")
 		if len(m.objects) == 0 {
