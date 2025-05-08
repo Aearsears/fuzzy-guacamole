@@ -18,6 +18,14 @@ type TreeNode struct {
 	Level    int
 }
 
+func (n *TreeNode) DisplayChildren() string {
+	s := ""
+	for _, child := range n.Children {
+		s += child.Value + "\n"
+	}
+	return s
+}
+
 func (t *Tree) Display() string {
 	s := fmt.Sprintf("%s\n", t.Root.Value)
 	for _, child := range t.Root.Children {
