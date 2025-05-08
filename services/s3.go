@@ -157,12 +157,15 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch msg.String() {
 		case "c":
-			// Create bucket logic here
-			// For now, just print a message
+			// todo: get user input for bucket name
 			cmds = append(cmds,
 				m.s3Client.CreateBucket(context.Background(),
 					&s3aws.CreateBucketInput{Bucket: aws.String("mynewbucket")}))
 
+		case "r":
+			cmds = append(cmds,
+				m.s3Client.ListBuckets(context.Background(),
+					&s3aws.ListBucketsInput{}))
 		}
 
 	}
