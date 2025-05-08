@@ -89,6 +89,8 @@ var StatusBarErrorStyle = lipgloss.NewStyle().
 type keymap struct {
 	Up        key.Binding
 	Down      key.Binding
+	Left      key.Binding
+	Right     key.Binding
 	Create    key.Binding
 	Enter     key.Binding
 	Rename    key.Binding
@@ -107,6 +109,14 @@ var Keymap = keymap{
 	Down: key.NewBinding(
 		key.WithKeys("down", "j"),
 		key.WithHelp("down/j", "down"),
+	),
+	Left: key.NewBinding(
+		key.WithKeys("left", "h"),
+		key.WithHelp("left/h", "left"),
+	),
+	Right: key.NewBinding(
+		key.WithKeys("right", "l"),
+		key.WithHelp("right/l", "right"),
 	),
 	Create: key.NewBinding(
 		key.WithKeys("c"),
