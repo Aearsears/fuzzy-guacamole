@@ -2,7 +2,6 @@ package s3
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
 
@@ -95,7 +94,7 @@ func (c *S3Client) ListObjects(ctx context.Context, input *s3.ListObjectsV2Input
 
 		var objs []string
 		for _, obj := range resp.Contents {
-			objs = append(objs, fmt.Sprintf("%s (%d bytes)", *obj.Key, obj.Size))
+			objs = append(objs, *obj.Key)
 		}
 		mssg.Objects = objs
 

@@ -47,6 +47,7 @@ type S3Menu struct {
 	selectedBucket string
 	viewObjects    bool
 	objects        []string
+	fileTree       *internal.Tree
 	s3Client       s3.S3API
 	err            error
 	loading        bool
@@ -64,6 +65,7 @@ func InitS3Menu() S3Menu {
 		s3Client: createS3Client(),
 		buckets:  nil,
 		objects:  nil,
+		fileTree: &internal.Tree{},
 		selected: 0,
 		err:      nil,
 		loading:  true,
@@ -124,6 +126,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case s3.S3OpListObjects:
 				m.viewObjects = true
 				m.objects = msg.Objects
+				m.fileTree = internal.CreateTree(m.objects)
 				cmds = append(cmds, func() tea.Msg {
 					return internal.APIMessage{
 						Status: fmt.Sprintf("S3: Fetched %d objects successfully for %s", len(m.objects), m.selectedBucket),
@@ -223,9 +226,7 @@ func (m S3Menu) View() string {
 		if len(m.objects) == 0 {
 			right.WriteString(DocStyle("No objects found.\n"))
 		} else {
-			for _, obj := range m.objects {
-				right.WriteString(DocStyle("• "+obj) + "\n")
-			}
+			right.WriteString(DocStyle(m.fileTree.Display()))
 		}
 	} else {
 		right.WriteString(DocStyle("Press [Enter] to view bucket contents."))
