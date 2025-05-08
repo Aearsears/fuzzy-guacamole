@@ -57,7 +57,7 @@ type S3Menu struct {
 func InitS3Menu() S3Menu {
 	input := textinput.New()
 	input.Prompt = "$ "
-	input.Placeholder = ""
+	input.Placeholder = "Enter a new bucket name..."
 	input.CharLimit = 250
 	input.Width = 50
 	return S3Menu{
