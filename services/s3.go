@@ -10,6 +10,7 @@ import (
 	"github.com/Aearsears/fuzzy-guacamole/internal"
 	"github.com/Aearsears/fuzzy-guacamole/internal/s3"
 	"github.com/Aearsears/fuzzy-guacamole/internal/utils"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	s3aws "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
@@ -96,13 +97,26 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			})
 
 		} else {
-			m.buckets = msg.Buckets
 			m.loading = false
-			cmds = append(cmds, func() tea.Msg {
-				return internal.APIMessage{
-					Status: fmt.Sprintf("S3: Listed %d buckets successfully", len(m.buckets)),
-				}
-			})
+			switch msg.Op {
+			case s3.S3OpListBuckets:
+				m.buckets = msg.Buckets
+				cmds = append(cmds, func() tea.Msg {
+					return internal.APIMessage{
+						Status: fmt.Sprintf("S3: Listed %d buckets successfully", len(m.buckets)),
+					}
+				})
+			case s3.S3OpCreateBucket:
+				cmds = append(cmds, func() tea.Msg {
+					return internal.APIMessage{
+						Status: fmt.Sprintf("S3: Created bucket %s", msg.Bucket),
+					}
+				}, m.s3Client.ListBuckets(context.Background(),
+					&s3aws.ListBucketsInput{}))
+			case s3.S3OpListObjects:
+				// handle objects
+			}
+
 		}
 
 	case tea.KeyMsg:
@@ -145,6 +159,9 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "c":
 			// Create bucket logic here
 			// For now, just print a message
+			cmds = append(cmds,
+				m.s3Client.CreateBucket(context.Background(),
+					&s3aws.CreateBucketInput{Bucket: aws.String("mynewbucket")}))
 
 		}
 

@@ -15,6 +15,7 @@ type StatusBar struct {
 	display      bool
 	loading      bool
 	timeout      int
+	messageQueue []internal.APIMessage
 }
 
 func statusBarTimeout(seconds int) tea.Cmd {
@@ -25,7 +26,7 @@ func statusBarTimeout(seconds int) tea.Cmd {
 
 func InitStatusBar() StatusBar {
 	return StatusBar{
-		timeout: 5,
+		timeout: 3,
 		loading: false,
 	}
 }
@@ -34,31 +35,43 @@ func (m StatusBar) Init() tea.Cmd {
 	return nil
 }
 
+func (m *StatusBar) showNextMessage() (StatusBar, tea.Cmd) {
+	if len(m.messageQueue) == 0 {
+		m.display = false
+		return *m, nil
+	}
+	msg := m.messageQueue[0]
+	m.messageQueue = m.messageQueue[1:]
+	m.display = true
+	if msg.Status != "" {
+		m.display_text = msg.Status
+		m.loading = true
+	} else if msg.Err != nil {
+		m.err = msg.Err
+		m.display_text = m.err.Error()
+		m.loading = false
+	} else if msg.Response != "" {
+		if response, ok := msg.Response.(string); ok {
+			m.display_text = response
+		} else {
+			m.display_text = "Invalid response type"
+		}
+		m.loading = false
+	}
+	return *m, statusBarTimeout(m.timeout)
+}
+
 func (m StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case internal.APIMessage:
-		// todo: how to timeout multiple messsages at a time?
-		m.display = true
-		if msg.Status != "" {
-			m.display_text = msg.Status
-			m.loading = true
-		} else if msg.Err != nil {
-			m.err = msg.Err
-			m.display_text = m.err.Error()
-			m.loading = false
-		} else if msg.Response != "" {
-			if response, ok := msg.Response.(string); ok {
-				m.display_text = response
-			} else {
-				m.display_text = "Invalid response type"
-			}
-			m.loading = false
+		m.messageQueue = append(m.messageQueue, msg)
+		if !m.display {
+			return m.showNextMessage()
 		}
-		return m, statusBarTimeout(m.timeout)
+		return m, nil
 
 	case StatusBarTimeoutMessage:
-		m.display = false
-		return m, nil
+		return m.showNextMessage()
 	}
 	return m, nil
 }

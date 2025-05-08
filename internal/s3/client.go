@@ -12,20 +12,26 @@ import (
 type S3Client struct {
 	Client *s3.Client
 }
+type S3OperationType int
+
+const (
+	S3OpListBuckets S3OperationType = iota
+	S3OpCreateBucket
+	S3OpListObjects
+)
 
 type S3MenuMessage struct {
-	APIMessage   internal.APIMessage
-	CreateBucket bool
-	LoadBuckets  bool
-	Buckets      []string
+	Op         S3OperationType
+	APIMessage internal.APIMessage
+	Buckets    []string // for ListBuckets
+	Objects    []string // for ListObjects
+	Bucket     string
 }
 
 func (c *S3Client) NewMessage() S3MenuMessage {
 	return S3MenuMessage{
-		APIMessage:   internal.APIMessage{},
-		CreateBucket: false,
-		LoadBuckets:  false,
-		Buckets:      nil,
+		APIMessage: internal.APIMessage{},
+		Buckets:    nil,
 	}
 }
 
@@ -44,6 +50,7 @@ func (c *S3Client) ListBuckets(ctx context.Context, input *s3.ListBucketsInput) 
 			Response: output,
 			Err:      err,
 		}
+		mssg.Op = S3OpListBuckets
 
 		var names []string
 		if err == nil {
@@ -53,7 +60,21 @@ func (c *S3Client) ListBuckets(ctx context.Context, input *s3.ListBucketsInput) 
 
 		}
 		mssg.Buckets = names
-		mssg.LoadBuckets = false
+		return mssg, err
+	})
+}
+
+func (c *S3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput) tea.Cmd {
+	return c.Wrapper(func() (any, error) {
+		output, err := c.Client.CreateBucket(ctx, input)
+		mssg := c.NewMessage()
+		mssg.APIMessage = internal.APIMessage{
+			Response: output,
+			Err:      err,
+		}
+		mssg.Op = S3OpCreateBucket
+		mssg.Bucket = *input.Bucket
+
 		return mssg, err
 	})
 }
