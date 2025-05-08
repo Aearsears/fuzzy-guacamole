@@ -13,4 +13,5 @@ type S3API interface {
 	// DeleteObject(ctx context.Context, input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error)
 	ListBuckets(ctx context.Context, input *s3.ListBucketsInput) tea.Cmd
 	CreateBucket(ctx context.Context, input *s3.CreateBucketInput) tea.Cmd
+	ListObjects(ctx context.Context, input *s3.ListObjectsV2Input) tea.Cmd
 }

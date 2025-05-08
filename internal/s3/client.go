@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
 
@@ -74,6 +75,26 @@ func (c *S3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput
 		}
 		mssg.Op = S3OpCreateBucket
 		mssg.Bucket = *input.Bucket
+
+		return mssg, err
+	})
+}
+
+func (c *S3Client) ListObjects(ctx context.Context, input *s3.ListObjectsV2Input) tea.Cmd {
+	return c.Wrapper(func() (any, error) {
+		resp, err := c.Client.ListObjectsV2(ctx, input)
+		mssg := c.NewMessage()
+		mssg.APIMessage = internal.APIMessage{
+			Response: resp,
+			Err:      err,
+		}
+		mssg.Op = S3OpListObjects
+
+		var objs []string
+		for _, obj := range resp.Contents {
+			objs = append(objs, fmt.Sprintf("%s (%d bytes)", *obj.Key, obj.Size))
+		}
+		mssg.Objects = objs
 
 		return mssg, err
 	})

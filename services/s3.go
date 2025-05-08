@@ -42,15 +42,16 @@ var (
 )
 
 type S3Menu struct {
-	buckets     []string
-	selected    int
-	viewObjects bool
-	objects     []string
-	s3Client    s3.S3API
-	err         error
-	loading     bool
-	spinner     spinner.Model
-	input       textinput.Model
+	buckets        []string
+	selected       int
+	selectedBucket string
+	viewObjects    bool
+	objects        []string
+	s3Client       s3.S3API
+	err            error
+	loading        bool
+	spinner        spinner.Model
+	input          textinput.Model
 }
 
 func InitS3Menu() S3Menu {
@@ -120,7 +121,13 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}, m.s3Client.ListBuckets(context.Background(),
 					&s3aws.ListBucketsInput{}))
 			case s3.S3OpListObjects:
-				// handle objects
+				m.viewObjects = true
+				m.objects = msg.Objects
+				cmds = append(cmds, func() tea.Msg {
+					return internal.APIMessage{
+						Status: fmt.Sprintf("S3: Fetched %d objects successfully for %s", len(m.objects), m.selectedBucket),
+					}
+				})
 			}
 
 		}
@@ -155,26 +162,14 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 
 			case key.Matches(msg, Keymap.Enter):
-				// Fetch objects for selected bucket
-				// if len(m.buckets) == 0 {
-				// 	return m, nil
-				// }
-				// bucket := m.buckets[m.selected]
-				// ctx := context.Background()
-				// resp, err := m.s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-				// 	Bucket:  aws.String(bucket),
-				// 	MaxKeys: aws.Int32(10),
-				// })
-				// // TODO: handle error in right side pane
-				// if err != nil {
-				// 	m.err = err
-				// }
-				// var objs []string
-				// for _, obj := range resp.Contents {
-				// 	objs = append(objs, fmt.Sprintf("%s (%d bytes)", *obj.Key, obj.Size))
-				// }
-				// m.viewObjects = true
-				// m.objects = objs
+				if len(m.buckets) != 0 {
+					m.selectedBucket = m.buckets[m.selected]
+					ctx := context.Background()
+					cmds = append(cmds,
+						m.s3Client.ListObjects(ctx,
+							&s3aws.ListObjectsV2Input{Bucket: aws.String(m.selectedBucket),
+								MaxKeys: aws.Int32(10)}))
+				}
 			case key.Matches(msg, Keymap.Backspace):
 				m.viewObjects = false
 			}
@@ -221,7 +216,7 @@ func (m S3Menu) View() string {
 
 	var right strings.Builder
 	if m.viewObjects {
-		right.WriteString(HeaderStyle(fmt.Sprintf("Objects in: %s", m.buckets[m.selected])) + "\n\n")
+		right.WriteString(HeaderStyle(fmt.Sprintf("Objects in: %s", m.selectedBucket)) + "\n\n")
 		if len(m.objects) == 0 {
 			right.WriteString(DocStyle("No objects found.\n"))
 		} else {
