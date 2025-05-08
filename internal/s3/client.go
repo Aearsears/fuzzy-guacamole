@@ -19,6 +19,9 @@ const (
 	S3OpListBuckets S3OperationType = iota
 	S3OpCreateBucket
 	S3OpListObjects
+	S3OpGetObject
+	S3OpPutObject
+	S3OpDeleteObject
 )
 
 type S3MenuMessage struct {
@@ -100,20 +103,44 @@ func (c *S3Client) ListObjects(ctx context.Context, input *s3.ListObjectsV2Input
 	})
 }
 
-// func (c *S3Client) PutObject(ctx context.Context, input *s3.PutObjectInput) tea.Cmd {
-// 	return c.Wrapper(func() (any, error) {
-// 		return c.client.PutObject(ctx, input)
-// 	})
-// }
+func (c *S3Client) PutObject(ctx context.Context, input *s3.PutObjectInput) tea.Cmd {
+	return c.Wrapper(func() (any, error) {
+		resp, err := c.Client.PutObject(ctx, input)
+		mssg := c.NewMessage()
+		mssg.APIMessage = internal.APIMessage{
+			Response: resp,
+			Err:      err,
+		}
+		mssg.Op = S3OpPutObject
 
-// func (c *S3Client) GetObject(ctx context.Context, input *s3.GetObjectInput) tea.Cmd {
-// 	return c.Wrapper(func() (any, error) {
-// 		return c.client.GetObject(ctx, input)
-// 	})
-// }
+		return mssg, err
+	})
+}
 
-// func (c *S3Client) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput) tea.Cmd {
-// 	return c.Wrapper(func() (any, error) {
-// 		return c.client.DeleteObject(ctx, input)
-// 	})
-// }
+func (c *S3Client) GetObject(ctx context.Context, input *s3.GetObjectInput) tea.Cmd {
+	return c.Wrapper(func() (any, error) {
+		resp, err := c.Client.GetObject(ctx, input)
+		mssg := c.NewMessage()
+		mssg.APIMessage = internal.APIMessage{
+			Response: resp,
+			Err:      err,
+		}
+		mssg.Op = S3OpGetObject
+
+		return mssg, err
+	})
+}
+
+func (c *S3Client) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput) tea.Cmd {
+	return c.Wrapper(func() (any, error) {
+		resp, err := c.Client.DeleteObject(ctx, input)
+		mssg := c.NewMessage()
+		mssg.APIMessage = internal.APIMessage{
+			Response: resp,
+			Err:      err,
+		}
+		mssg.Op = S3OpDeleteObject
+
+		return mssg, err
+	})
+}
