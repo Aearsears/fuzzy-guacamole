@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
 	"github.com/Aearsears/fuzzy-guacamole/internal/s3"
@@ -49,10 +50,15 @@ type S3Menu struct {
 	err         error
 	loading     bool
 	spinner     spinner.Model
+	input       textinput.Model
 }
 
 func InitS3Menu() S3Menu {
-	// Load buckets on init
+	input := textinput.New()
+	input.Prompt = "$ "
+	input.Placeholder = ""
+	input.CharLimit = 250
+	input.Width = 50
 	return S3Menu{
 		s3Client: createS3Client(),
 		buckets:  nil,
@@ -61,18 +67,18 @@ func InitS3Menu() S3Menu {
 		err:      nil,
 		loading:  true,
 		spinner:  CreateSpinner(),
+		input:    input,
 	}
 }
 
 func (m S3Menu) Init() tea.Cmd {
+	// Load buckets on init
 	return tea.Batch(m.spinner.Tick,
 		m.s3Client.ListBuckets(context.Background(),
 			&s3aws.ListBucketsInput{}),
-		func() tea.Msg {
-			return internal.APIMessage{
-				Status: "Loading buckets...",
-			}
-		},
+		utils.SendMessage(internal.APIMessage{
+			Status: "Loading buckets...",
+		}),
 	)
 }
 
@@ -120,54 +126,70 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, Keymap.Up):
-			if m.selected > 0 {
-				m.selected--
+		if m.input.Focused() {
+			//todo: handle multiple operations for buckets in the same input field
+			if key.Matches(msg, Keymap.Enter) {
+				cmds = append(cmds,
+					m.s3Client.CreateBucket(context.Background(),
+						&s3aws.CreateBucketInput{Bucket: aws.String(m.input.Value())}))
+				m.input.SetValue("")
+				m.input.Blur()
+			}
+			if key.Matches(msg, Keymap.Backspace) {
+				m.input.SetValue("")
+				m.input.Blur()
+			}
+			// only log keypresses for the input field when it's focused
+			m.input, cmd = m.input.Update(msg)
+			cmds = append(cmds, cmd)
+		} else {
+			switch {
+			case key.Matches(msg, Keymap.Up):
+				if m.selected > 0 {
+					m.selected--
+				}
+
+			case key.Matches(msg, Keymap.Down):
+				if m.selected < len(m.buckets)-1 {
+					m.selected++
+				}
+
+			case key.Matches(msg, Keymap.Enter):
+				// Fetch objects for selected bucket
+				// if len(m.buckets) == 0 {
+				// 	return m, nil
+				// }
+				// bucket := m.buckets[m.selected]
+				// ctx := context.Background()
+				// resp, err := m.s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+				// 	Bucket:  aws.String(bucket),
+				// 	MaxKeys: aws.Int32(10),
+				// })
+				// // TODO: handle error in right side pane
+				// if err != nil {
+				// 	m.err = err
+				// }
+				// var objs []string
+				// for _, obj := range resp.Contents {
+				// 	objs = append(objs, fmt.Sprintf("%s (%d bytes)", *obj.Key, obj.Size))
+				// }
+				// m.viewObjects = true
+				// m.objects = objs
+			case key.Matches(msg, Keymap.Backspace):
+				m.viewObjects = false
+			}
+			switch msg.String() {
+			case "c":
+				m.input.Focus()
+				cmds = append(cmds, textinput.Blink)
+
+			case "r":
+				cmds = append(cmds,
+					m.s3Client.ListBuckets(context.Background(),
+						&s3aws.ListBucketsInput{}))
 			}
 
-		case key.Matches(msg, Keymap.Down):
-			if m.selected < len(m.buckets)-1 {
-				m.selected++
-			}
-
-		case key.Matches(msg, Keymap.Enter):
-			// Fetch objects for selected bucket
-			// if len(m.buckets) == 0 {
-			// 	return m, nil
-			// }
-			// bucket := m.buckets[m.selected]
-			// ctx := context.Background()
-			// resp, err := m.s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-			// 	Bucket:  aws.String(bucket),
-			// 	MaxKeys: aws.Int32(10),
-			// })
-			// // TODO: handle error in right side pane
-			// if err != nil {
-			// 	m.err = err
-			// }
-			// var objs []string
-			// for _, obj := range resp.Contents {
-			// 	objs = append(objs, fmt.Sprintf("%s (%d bytes)", *obj.Key, obj.Size))
-			// }
-			// m.viewObjects = true
-			// m.objects = objs
-		case key.Matches(msg, Keymap.Backspace):
-			m.viewObjects = false
 		}
-		switch msg.String() {
-		case "c":
-			// todo: get user input for bucket name
-			cmds = append(cmds,
-				m.s3Client.CreateBucket(context.Background(),
-					&s3aws.CreateBucketInput{Bucket: aws.String("mynewbucket")}))
-
-		case "r":
-			cmds = append(cmds,
-				m.s3Client.ListBuckets(context.Background(),
-					&s3aws.ListBucketsInput{}))
-		}
-
 	}
 	return m, tea.Batch(cmds...)
 }
@@ -213,10 +235,14 @@ func (m S3Menu) View() string {
 
 	leftBox := leftPanel.Render(left.String())
 	rightBox := rightPanel.Render(right.String())
-
-	return flexLayout.Render(
+	menu := flexLayout.Render(
 		lipgloss.JoinHorizontal(lipgloss.Top, leftBox, rightBox),
 	)
+
+	if m.input.Focused() {
+		menu += "\n" + m.input.View() // Add the input field at the bottom
+	}
+	return menu
 }
 
 func createS3Client() s3.S3API {
