@@ -96,7 +96,6 @@ func (m S3Menu) Init() tea.Cmd {
 	)
 }
 
-// todo: delete objects
 // todo: allow user to change savePath
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -304,7 +303,6 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 								}, m.savePath))
 					}
 					//TODO: somehow refresh the view after the file is downloaded/deleted
-					//TODO: confirmation dialog for delete
 				case key.Matches(msg, Keymap.Delete):
 					if len(m.ptr.Children) == 0 && m.ptr.Value != "/" {
 						m.input.Placeholder = fmt.Sprintf("Confirm delete of %s [y/n]", strings.Join(m.breadcrumbs[1:], "/"))
