@@ -48,6 +48,7 @@ type S3Menu struct {
 	selectedBucket string
 	viewObjects    bool
 	objects        []string
+	paneFocus      int // 0 = left, 1 = right
 	fileTree       *internal.Tree
 	ptr            *internal.TreeNode
 	s3Client       s3.S3API
@@ -64,16 +65,17 @@ func InitS3Menu() S3Menu {
 	input.CharLimit = 250
 	input.Width = 50
 	return S3Menu{
-		s3Client: createS3Client(),
-		buckets:  nil,
-		objects:  nil,
-		fileTree: &internal.Tree{},
-		ptr:      &internal.TreeNode{},
-		selected: 0,
-		err:      nil,
-		loading:  true,
-		spinner:  CreateSpinner(),
-		input:    input,
+		s3Client:  createS3Client(),
+		buckets:   nil,
+		objects:   nil,
+		fileTree:  &internal.Tree{},
+		ptr:       &internal.TreeNode{},
+		selected:  0,
+		paneFocus: 0,
+		err:       nil,
+		loading:   true,
+		spinner:   CreateSpinner(),
+		input:     input,
 	}
 }
 
@@ -131,6 +133,8 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.objects = msg.Objects
 				m.fileTree = internal.CreateTree(m.objects)
 				m.ptr = m.fileTree.Root
+				m.paneFocus = 1
+				m.selected = 0
 				cmds = append(cmds, func() tea.Msg {
 					return internal.APIMessage{
 						Status: fmt.Sprintf("S3: Fetched %d objects successfully for %s", len(m.objects), m.selectedBucket),
@@ -158,39 +162,83 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.input, cmd = m.input.Update(msg)
 			cmds = append(cmds, cmd)
 		} else {
-			switch {
-			case key.Matches(msg, Keymap.Up):
-				if m.selected > 0 {
-					m.selected--
-				}
+			//bucket pane
+			if m.paneFocus == 0 {
+				switch {
+				case key.Matches(msg, Keymap.Up):
+					if m.selected > 0 {
+						m.selected--
+					}
 
-			case key.Matches(msg, Keymap.Down):
-				if m.selected < len(m.buckets)-1 {
-					m.selected++
-				}
+				case key.Matches(msg, Keymap.Down):
+					if m.selected < len(m.buckets)-1 {
+						m.selected++
+					}
+				//todo: handle the case where the file tree is already visible
+				case key.Matches(msg, Keymap.Left):
+					if m.viewObjects {
 
-			case key.Matches(msg, Keymap.Enter):
-				if len(m.buckets) != 0 {
-					m.selectedBucket = *m.buckets[m.selected].Name
-					ctx := context.Background()
+					}
+
+				case key.Matches(msg, Keymap.Right):
+					if m.viewObjects {
+
+					}
+
+				case key.Matches(msg, Keymap.Enter):
+					if len(m.buckets) != 0 {
+						m.selectedBucket = *m.buckets[m.selected].Name
+						ctx := context.Background()
+						cmds = append(cmds,
+							m.s3Client.ListObjects(ctx,
+								&s3aws.ListObjectsV2Input{Bucket: aws.String(m.selectedBucket),
+									MaxKeys: aws.Int32(10)}))
+					}
+
+				case key.Matches(msg, Keymap.Create):
+					m.input.Focus()
+					cmds = append(cmds, textinput.Blink)
+
+				case key.Matches(msg, Keymap.Backspace):
+					m.viewObjects = false
+				}
+				switch msg.String() {
+				case "r":
 					cmds = append(cmds,
-						m.s3Client.ListObjects(ctx,
-							&s3aws.ListObjectsV2Input{Bucket: aws.String(m.selectedBucket),
-								MaxKeys: aws.Int32(10)}))
+						m.s3Client.ListBuckets(context.Background(),
+							&s3aws.ListBucketsInput{}))
+				}
+			} else {
+				//object pane
+				switch {
+				case key.Matches(msg, Keymap.Up):
+					if m.selected > 0 {
+						m.selected--
+					}
+
+				case key.Matches(msg, Keymap.Down):
+					if m.selected < len(m.ptr.Children)-1 {
+						m.selected++
+					}
+
+				case key.Matches(msg, Keymap.Left):
+					if m.ptr.Parent == nil {
+						//at root, go back to buckets
+						m.paneFocus = 0
+					} else {
+						//go up a level in the tree
+						m.ptr = m.ptr.Parent
+
+					}
+
+				case key.Matches(msg, Keymap.Right):
+					if len(m.ptr.Children) != 0 {
+						//go down a level in the tree
+						m.ptr = m.ptr.Children[m.selected]
+						m.selected = 0 // reset back to zero so dont get out of bounds
+					}
 				}
 
-			case key.Matches(msg, Keymap.Create):
-				m.input.Focus()
-				cmds = append(cmds, textinput.Blink)
-
-			case key.Matches(msg, Keymap.Backspace):
-				m.viewObjects = false
-			}
-			switch msg.String() {
-			case "r":
-				cmds = append(cmds,
-					m.s3Client.ListBuckets(context.Background(),
-						&s3aws.ListBucketsInput{}))
 			}
 
 		}
@@ -220,7 +268,7 @@ func (m S3Menu) View() string {
 				display = fmt.Sprintf("%s %s %s", *bucket.Name, *bucket.BucketRegion, bucket.CreationDate.Format("2006-01-02"))
 			}
 
-			if i == m.selected {
+			if i == m.selected && m.paneFocus == 0 {
 				cursor = CursorStyle(">")
 				display = SelectedStyle.Render(display)
 			} else {
@@ -239,9 +287,22 @@ func (m S3Menu) View() string {
 			right.WriteString(DocStyle("No objects found.\n"))
 		} else {
 			// render the current dir
-			right.WriteString(DocStyle(m.ptr.DisplayChildren()))
+			for i, object := range m.ptr.Children {
+				cursor := " "
+				display := object.Value
+
+				if i == m.selected && m.paneFocus == 1 {
+					cursor = CursorStyle(">")
+					display = SelectedStyle.Render(display)
+				} else {
+					display = ChoiceStyle(display)
+				}
+
+				right.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
+			}
 		}
 		//todo:add breadcrumbs to navigate back up the tree
+		right.WriteString(DocStyle("/" + m.ptr.Value))
 	} else {
 		right.WriteString(DocStyle("Press [Enter] to view bucket contents."))
 	}
