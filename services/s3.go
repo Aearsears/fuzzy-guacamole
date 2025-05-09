@@ -58,6 +58,7 @@ type S3Menu struct {
 	loading        bool
 	spinner        spinner.Model
 	input          textinput.Model
+	createFlag     bool
 }
 
 func InitS3Menu() S3Menu {
@@ -80,6 +81,7 @@ func InitS3Menu() S3Menu {
 		spinner:     CreateSpinner(),
 		input:       input,
 		savePath:    ".",
+		createFlag:  true,
 	}
 }
 
@@ -159,20 +161,31 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if m.input.Focused() {
-			//todo: handle multiple operations for buckets in the same input field
 			if key.Matches(msg, Keymap.Enter) {
 				if m.paneFocus == 0 {
 					cmds = append(cmds,
 						m.s3Client.CreateBucket(context.Background(),
 							&s3aws.CreateBucketInput{Bucket: aws.String(m.input.Value())}))
 				} else {
-					cmds = append(cmds,
-						m.s3Client.PutObject(
-							context.Background(),
-							&s3aws.PutObjectInput{
-								Bucket: aws.String(m.selectedBucket),
-								Key:    aws.String(strings.Join(append(m.breadcrumbs[1:], m.input.Value()), "/"))},
-							m.input.Value()))
+					if m.createFlag {
+						cmds = append(cmds,
+							m.s3Client.PutObject(
+								context.Background(),
+								&s3aws.PutObjectInput{
+									Bucket: aws.String(m.selectedBucket),
+									Key:    aws.String(strings.Join(append(m.breadcrumbs[1:], m.input.Value()), "/"))},
+								m.input.Value()))
+					} else {
+						if m.input.Value() == "y" {
+							cmds = append(cmds,
+								m.s3Client.DeleteObject(context.Background(),
+									&s3aws.DeleteObjectInput{
+										Bucket: aws.String(m.selectedBucket),
+										Key:    aws.String(strings.Join(m.breadcrumbs[1:], "/")),
+									}))
+						}
+						m.createFlag = true
+					}
 				}
 				m.input.SetValue("")
 				m.input.Blur()
@@ -277,6 +290,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case key.Matches(msg, Keymap.Create):
 					m.input.Placeholder = "Enter path of your file..."
 					m.input.Focus()
+					m.createFlag = true
 					cmds = append(cmds, textinput.Blink)
 
 				case key.Matches(msg, Keymap.Enter):
@@ -293,13 +307,10 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					//TODO: confirmation dialog for delete
 				case key.Matches(msg, Keymap.Delete):
 					if len(m.ptr.Children) == 0 && m.ptr.Value != "/" {
-						ctx := context.Background()
-						cmds = append(cmds,
-							m.s3Client.DeleteObject(ctx,
-								&s3aws.DeleteObjectInput{
-									Bucket: aws.String(m.selectedBucket),
-									Key:    aws.String(strings.Join(m.breadcrumbs[1:], "/")),
-								}))
+						m.input.Placeholder = fmt.Sprintf("Confirm delete of %s [y/n]", strings.Join(m.breadcrumbs[1:], "/"))
+						m.input.Focus()
+						m.createFlag = false
+						cmds = append(cmds, textinput.Blink)
 					}
 
 				}
