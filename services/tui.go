@@ -183,6 +183,7 @@ func (m TUI) View() string {
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Left.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Right.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Create.Help()))
+	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Delete.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Enter.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Back.Help()))
 	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Backspace.Help()))

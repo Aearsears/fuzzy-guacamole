@@ -146,13 +146,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Status: fmt.Sprintf("S3: Fetched %d objects successfully for %s", len(m.objects), m.selectedBucket),
 					}
 				})
-			case s3.S3OpGetObject:
-				cmds = append(cmds, func() tea.Msg {
-					return internal.APIMessage{
-						Status: msg.APIMessage.Status,
-					}
-				})
-			case s3.S3OpPutObject:
+			case s3.S3OpGetObject, s3.S3OpPutObject, s3.S3OpDeleteObject:
 				cmds = append(cmds, func() tea.Msg {
 					return internal.APIMessage{
 						Status: msg.APIMessage.Status,
@@ -294,6 +288,18 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 									Bucket: aws.String(m.selectedBucket),
 									Key:    aws.String(strings.Join(m.breadcrumbs[1:], "/")),
 								}, m.savePath))
+					}
+					//TODO: somehow refresh the view after the file is downloaded/deleted
+					//TODO: confirmation dialog for delete
+				case key.Matches(msg, Keymap.Delete):
+					if len(m.ptr.Children) == 0 && m.ptr.Value != "/" {
+						ctx := context.Background()
+						cmds = append(cmds,
+							m.s3Client.DeleteObject(ctx,
+								&s3aws.DeleteObjectInput{
+									Bucket: aws.String(m.selectedBucket),
+									Key:    aws.String(strings.Join(m.breadcrumbs[1:], "/")),
+								}))
 					}
 
 				}

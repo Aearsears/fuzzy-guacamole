@@ -178,6 +178,7 @@ func (c *S3Client) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput
 		mssg.APIMessage = internal.APIMessage{
 			Response: resp,
 			Err:      err,
+			Status:   fmt.Sprintf("Deleted %s/%s successfully", *input.Bucket, *input.Key),
 		}
 		mssg.Op = S3OpDeleteObject
 
