@@ -94,7 +94,7 @@ func (m S3Menu) Init() tea.Cmd {
 	)
 }
 
-// todo: put and delete objects
+// todo: delete objects
 // todo: allow user to change savePath
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
@@ -152,6 +152,12 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Status: msg.APIMessage.Status,
 					}
 				})
+			case s3.S3OpPutObject:
+				cmds = append(cmds, func() tea.Msg {
+					return internal.APIMessage{
+						Status: msg.APIMessage.Status,
+					}
+				})
 
 			}
 
@@ -165,6 +171,14 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds,
 						m.s3Client.CreateBucket(context.Background(),
 							&s3aws.CreateBucketInput{Bucket: aws.String(m.input.Value())}))
+				} else {
+					cmds = append(cmds,
+						m.s3Client.PutObject(
+							context.Background(),
+							&s3aws.PutObjectInput{
+								Bucket: aws.String(m.selectedBucket),
+								Key:    aws.String(strings.Join(append(m.breadcrumbs[1:], m.input.Value()), "/"))},
+							m.input.Value()))
 				}
 				m.input.SetValue("")
 				m.input.Blur()
@@ -218,6 +232,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 
 				case key.Matches(msg, Keymap.Create):
+					m.input.Placeholder = "Enter a new bucket name..."
 					m.input.Focus()
 					cmds = append(cmds, textinput.Blink)
 
@@ -264,6 +279,11 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.ptr = m.ptr.Children[m.selected]
 						m.selected = 0 // reset back to zero so dont get out of bounds
 					}
+
+				case key.Matches(msg, Keymap.Create):
+					m.input.Placeholder = "Enter path of your file..."
+					m.input.Focus()
+					cmds = append(cmds, textinput.Blink)
 
 				case key.Matches(msg, Keymap.Enter):
 					if len(m.ptr.Children) == 0 && m.ptr.Value != "/" {

@@ -100,15 +100,26 @@ func (c *S3Client) ListObjects(ctx context.Context, input *s3.ListObjectsV2Input
 	})
 }
 
-func (c *S3Client) PutObject(ctx context.Context, input *s3.PutObjectInput) tea.Cmd {
+// PutObject uploads a file to S3. filePath is relative to the current working directory of the TUI
+func (c *S3Client) PutObject(ctx context.Context, input *s3.PutObjectInput, filePath string) tea.Cmd {
 	return c.Wrapper(func() (any, error) {
 		//TODO: handle large objects
-		resp, err := c.Client.PutObject(ctx, input)
+
 		mssg := c.NewMessage()
-		mssg.APIMessage = internal.APIMessage{
-			Response: resp,
-			Err:      err,
+		mssg.APIMessage = internal.APIMessage{}
+		file, err := os.Open(filePath)
+		if err != nil {
+			mssg.APIMessage.Err = err
+			return mssg, err
 		}
+
+		defer file.Close()
+		input.Body = file
+
+		resp, err := c.Client.PutObject(ctx, input)
+		mssg.APIMessage.Response = resp
+		mssg.APIMessage.Err = err
+		mssg.APIMessage.Status = fmt.Sprintf("Uploaded %s/%s successfully", *input.Bucket, *input.Key)
 		mssg.Op = S3OpPutObject
 
 		return mssg, err
