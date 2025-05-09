@@ -48,7 +48,8 @@ type S3Menu struct {
 	selectedBucket string
 	viewObjects    bool
 	objects        []string
-	paneFocus      int // 0 = left, 1 = right
+	paneFocus      int      // 0 = left, 1 = right
+	breadcrumbs    []string // stack of directories
 	fileTree       *internal.Tree
 	ptr            *internal.TreeNode
 	s3Client       s3.S3API
@@ -65,17 +66,18 @@ func InitS3Menu() S3Menu {
 	input.CharLimit = 250
 	input.Width = 50
 	return S3Menu{
-		s3Client:  createS3Client(),
-		buckets:   nil,
-		objects:   nil,
-		fileTree:  &internal.Tree{},
-		ptr:       &internal.TreeNode{},
-		selected:  0,
-		paneFocus: 0,
-		err:       nil,
-		loading:   true,
-		spinner:   CreateSpinner(),
-		input:     input,
+		s3Client:    createS3Client(),
+		buckets:     nil,
+		objects:     nil,
+		fileTree:    &internal.Tree{},
+		ptr:         &internal.TreeNode{},
+		selected:    0,
+		paneFocus:   0,
+		breadcrumbs: []string{},
+		err:         nil,
+		loading:     true,
+		spinner:     CreateSpinner(),
+		input:       input,
 	}
 }
 
@@ -182,7 +184,11 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				case key.Matches(msg, Keymap.Right):
 					if m.viewObjects {
-
+						m.paneFocus = 1
+						//need to move select index to the last valid object in the array
+						if m.selected > len(m.ptr.Children)-1 {
+							m.selected = len(m.ptr.Children) - 1
+						}
 					}
 
 				case key.Matches(msg, Keymap.Enter):
@@ -201,6 +207,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				case key.Matches(msg, Keymap.Backspace):
 					m.viewObjects = false
+					m.paneFocus = 0
 				}
 				switch msg.String() {
 				case "r":
@@ -225,6 +232,9 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if m.ptr.Parent == nil {
 						//at root, go back to buckets
 						m.paneFocus = 0
+						if m.selected > len(m.buckets)-1 {
+							m.selected = len(m.buckets) - 1
+						}
 					} else {
 						//go up a level in the tree
 						m.ptr = m.ptr.Parent
