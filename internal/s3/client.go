@@ -102,6 +102,7 @@ func (c *S3Client) ListObjects(ctx context.Context, input *s3.ListObjectsV2Input
 
 func (c *S3Client) PutObject(ctx context.Context, input *s3.PutObjectInput) tea.Cmd {
 	return c.Wrapper(func() (any, error) {
+		//TODO: handle large objects
 		resp, err := c.Client.PutObject(ctx, input)
 		mssg := c.NewMessage()
 		mssg.APIMessage = internal.APIMessage{
@@ -116,6 +117,7 @@ func (c *S3Client) PutObject(ctx context.Context, input *s3.PutObjectInput) tea.
 
 func (c *S3Client) GetObject(ctx context.Context, input *s3.GetObjectInput, savePath string) tea.Cmd {
 	return c.Wrapper(func() (any, error) {
+		//TODO: handle large objects
 		resp, err := c.Client.GetObject(ctx, input)
 		mssg := c.NewMessage()
 		mssg.APIMessage = internal.APIMessage{

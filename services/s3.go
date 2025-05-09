@@ -48,7 +48,7 @@ type S3Menu struct {
 	selectedBucket string
 	viewObjects    bool
 	objects        []string
-	paneFocus      int      // 0 = left, 1 = right
+	paneFocus      int      // 0 = left for buckets, 1 = right for objects
 	breadcrumbs    []string // stack of directories
 	fileTree       *internal.Tree
 	ptr            *internal.TreeNode
@@ -161,9 +161,11 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.input.Focused() {
 			//todo: handle multiple operations for buckets in the same input field
 			if key.Matches(msg, Keymap.Enter) {
-				cmds = append(cmds,
-					m.s3Client.CreateBucket(context.Background(),
-						&s3aws.CreateBucketInput{Bucket: aws.String(m.input.Value())}))
+				if m.paneFocus == 0 {
+					cmds = append(cmds,
+						m.s3Client.CreateBucket(context.Background(),
+							&s3aws.CreateBucketInput{Bucket: aws.String(m.input.Value())}))
+				}
 				m.input.SetValue("")
 				m.input.Blur()
 			}
@@ -190,6 +192,9 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				//todo: handle the case where the file tree is already visible
 				case key.Matches(msg, Keymap.Left):
 					if m.viewObjects {
+						if m.selected > len(m.buckets)-1 {
+							m.selected = len(m.buckets) - 1
+						}
 
 					}
 
@@ -243,7 +248,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					if m.ptr.Parent == nil {
 						//at root, go back to buckets
 						m.paneFocus = 0
-						if m.selected > len(m.buckets)-1 {
+						if m.selected > len(m.buckets)-1 || m.selected < 0 {
 							m.selected = len(m.buckets) - 1
 						}
 					} else {
@@ -261,7 +266,7 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 
 				case key.Matches(msg, Keymap.Enter):
-					if len(m.ptr.Children) == 0 {
+					if len(m.ptr.Children) == 0 && m.ptr.Value != "/" {
 						ctx := context.Background()
 						cmds = append(cmds,
 							m.s3Client.GetObject(ctx,
