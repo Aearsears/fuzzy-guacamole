@@ -52,6 +52,7 @@ type S3Menu struct {
 	breadcrumbs    []string // stack of directories
 	fileTree       *internal.Tree
 	ptr            *internal.TreeNode
+	savePath       string
 	s3Client       s3.S3API
 	err            error
 	loading        bool
@@ -78,6 +79,7 @@ func InitS3Menu() S3Menu {
 		loading:     true,
 		spinner:     CreateSpinner(),
 		input:       input,
+		savePath:    ".",
 	}
 }
 
@@ -92,7 +94,8 @@ func (m S3Menu) Init() tea.Cmd {
 	)
 }
 
-// todo: get, put and delete objects
+// todo: put and delete objects
+// todo: allow user to change savePath
 func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
@@ -105,11 +108,10 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case s3.S3MenuMessage:
 		if msg.APIMessage.Err != nil {
-			m.err = msg.APIMessage.Err
 			m.loading = false
 			cmds = append(cmds, func() tea.Msg {
 				return internal.APIMessage{
-					Err: m.err,
+					Err: msg.APIMessage.Err,
 				}
 			})
 
@@ -144,6 +146,13 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Status: fmt.Sprintf("S3: Fetched %d objects successfully for %s", len(m.objects), m.selectedBucket),
 					}
 				})
+			case s3.S3OpGetObject:
+				cmds = append(cmds, func() tea.Msg {
+					return internal.APIMessage{
+						Status: msg.APIMessage.Status,
+					}
+				})
+
 			}
 
 		}
@@ -250,6 +259,18 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.ptr = m.ptr.Children[m.selected]
 						m.selected = 0 // reset back to zero so dont get out of bounds
 					}
+
+				case key.Matches(msg, Keymap.Enter):
+					if len(m.ptr.Children) == 0 {
+						ctx := context.Background()
+						cmds = append(cmds,
+							m.s3Client.GetObject(ctx,
+								&s3aws.GetObjectInput{
+									Bucket: aws.String(m.selectedBucket),
+									Key:    aws.String(strings.Join(m.breadcrumbs[1:], "/")),
+								}, m.savePath))
+					}
+
 				}
 
 			}

@@ -21,7 +21,11 @@
             "args": [],
             "cwd": "${workspaceFolder}",
             "console": "externalTerminal", // This is crucial for TUI apps
-            "env": {}
+            "env": {},
+            "debugAdapter": "dlv-dap",
+            "trace": "verbose",
+            "showLog": true,
+            "dlvFlags": ["--log"]
         }
     ],
     "inputs": [

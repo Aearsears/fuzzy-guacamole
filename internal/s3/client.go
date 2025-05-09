@@ -2,6 +2,11 @@ package s3
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -109,18 +114,48 @@ func (c *S3Client) PutObject(ctx context.Context, input *s3.PutObjectInput) tea.
 	})
 }
 
-func (c *S3Client) GetObject(ctx context.Context, input *s3.GetObjectInput) tea.Cmd {
+func (c *S3Client) GetObject(ctx context.Context, input *s3.GetObjectInput, savePath string) tea.Cmd {
 	return c.Wrapper(func() (any, error) {
 		resp, err := c.Client.GetObject(ctx, input)
 		mssg := c.NewMessage()
 		mssg.APIMessage = internal.APIMessage{
 			Response: resp,
 			Err:      err,
+			Status:   fmt.Sprintf("Fetched %s/%s successfully", *input.Bucket, *input.Key),
 		}
 		mssg.Op = S3OpGetObject
 
+		if err != nil {
+			return mssg, err
+		}
+
+		defer resp.Body.Close()
+
+		_, tail := splitLast(*input.Key, "/")
+		outFile, err := os.Create(filepath.Join(savePath, tail))
+		if err != nil {
+			mssg.APIMessage.Err = err
+			return mssg, err
+		}
+		defer outFile.Close()
+
+		_, err = io.Copy(outFile, resp.Body)
+		if err != nil {
+			mssg.APIMessage.Err = err
+			return mssg, err
+		}
+
 		return mssg, err
 	})
+}
+
+// splitLast splits a string s into two parts at the last occurrence of sep
+func splitLast(s, sep string) (string, string) {
+	idx := strings.LastIndex(s, sep)
+	if idx == -1 {
+		return s, "" // sep not found
+	}
+	return s[:idx], s[idx+len(sep):]
 }
 
 func (c *S3Client) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput) tea.Cmd {

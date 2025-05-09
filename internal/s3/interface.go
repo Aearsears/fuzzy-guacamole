@@ -9,7 +9,7 @@ import (
 
 type S3API interface {
 	PutObject(ctx context.Context, input *s3.PutObjectInput) tea.Cmd
-	GetObject(ctx context.Context, input *s3.GetObjectInput) tea.Cmd
+	GetObject(ctx context.Context, input *s3.GetObjectInput, savePath string) tea.Cmd
 	DeleteObject(ctx context.Context, input *s3.DeleteObjectInput) tea.Cmd
 	ListBuckets(ctx context.Context, input *s3.ListBucketsInput) tea.Cmd
 	CreateBucket(ctx context.Context, input *s3.CreateBucketInput) tea.Cmd
