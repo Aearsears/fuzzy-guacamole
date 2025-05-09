@@ -137,6 +137,8 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.ptr = m.fileTree.Root
 				m.paneFocus = 1
 				m.selected = 0
+				m.breadcrumbs = m.breadcrumbs[:0]
+				m.breadcrumbs = append(m.breadcrumbs, m.ptr.Value)
 				cmds = append(cmds, func() tea.Msg {
 					return internal.APIMessage{
 						Status: fmt.Sprintf("S3: Fetched %d objects successfully for %s", len(m.objects), m.selectedBucket),
@@ -238,12 +240,13 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					} else {
 						//go up a level in the tree
 						m.ptr = m.ptr.Parent
-
+						m.breadcrumbs = m.breadcrumbs[:len(m.breadcrumbs)-1]
 					}
 
 				case key.Matches(msg, Keymap.Right):
 					if len(m.ptr.Children) != 0 {
 						//go down a level in the tree
+						m.breadcrumbs = append(m.breadcrumbs, m.ptr.Children[m.selected].Value)
 						m.ptr = m.ptr.Children[m.selected]
 						m.selected = 0 // reset back to zero so dont get out of bounds
 					}
@@ -311,8 +314,7 @@ func (m S3Menu) View() string {
 				right.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
 			}
 		}
-		//todo:add breadcrumbs to navigate back up the tree
-		right.WriteString(DocStyle("/" + m.ptr.Value))
+		right.WriteString("\n" + ChoiceStyle(m.breadcrumbs[0]+strings.Join(m.breadcrumbs[1:], "/")))
 	} else {
 		right.WriteString(DocStyle("Press [Enter] to view bucket contents."))
 	}
