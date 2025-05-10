@@ -48,6 +48,7 @@ type S3Menu struct {
 	selectedBucket string
 	viewObjects    bool
 	objects        []string
+	objectMetadata s3.S3ObjectMetadata
 	paneFocus      int      // 0 = left for buckets, 1 = right for objects
 	breadcrumbs    []string // stack of directories
 	fileTree       *internal.Tree
@@ -124,6 +125,13 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, func() tea.Msg {
 					return internal.APIMessage{
 						Status: fmt.Sprintf("S3: Listed %d buckets successfully", len(m.buckets)),
+					}
+				})
+			case s3.S3OpGetObjectMetadata:
+				m.objectMetadata = msg.Metadata
+				cmds = append(cmds, func() tea.Msg {
+					return internal.APIMessage{
+						Status: msg.APIMessage.Status,
 					}
 				})
 			case s3.S3OpCreateBucket:
@@ -284,6 +292,16 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.breadcrumbs = append(m.breadcrumbs, m.ptr.Children[m.selected].Value)
 						m.ptr = m.ptr.Children[m.selected]
 						m.selected = 0 // reset back to zero so dont get out of bounds
+						if len(m.ptr.Children) == 0 {
+							//get object metadata of file leaf node
+							ctx := context.Background()
+							cmds = append(cmds,
+								m.s3Client.GetObjectMetadata(ctx,
+									&s3aws.HeadObjectInput{
+										Bucket: aws.String(m.selectedBucket),
+										Key:    aws.String(strings.Join(m.breadcrumbs[1:], "/")),
+									}))
+						}
 					}
 
 				case key.Matches(msg, Keymap.Create):
@@ -361,18 +379,35 @@ func (m S3Menu) View() string {
 			right.WriteString(DocStyle("No objects found.\n"))
 		} else {
 			// render the current dir
-			for i, object := range m.ptr.Children {
-				cursor := " "
-				display := object.Value
+			if len(m.ptr.Children) != 0 {
+				for i, object := range m.ptr.Children {
+					cursor := " "
+					display := object.Value
 
-				if i == m.selected && m.paneFocus == 1 {
-					cursor = CursorStyle(">")
-					display = SelectedStyle.Render(display)
-				} else {
-					display = ChoiceStyle(display)
+					if i == m.selected && m.paneFocus == 1 {
+						cursor = CursorStyle(">")
+						display = SelectedStyle.Render(display)
+					} else {
+						display = ChoiceStyle(display)
+					}
+
+					right.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
 				}
-
-				right.WriteString(fmt.Sprintf("%s%s\n", cursor, display))
+			} else {
+				//render the file metadata
+				right.WriteString(fmt.Sprintf("File: %s\n", strings.Join(m.breadcrumbs[1:], "/")))
+				right.WriteString(fmt.Sprintf("Size: %d bytes\n", m.objectMetadata.ContentLength))
+				right.WriteString(fmt.Sprintf("Last Modified: %s\n", m.objectMetadata.LastModified.Format("2006-01-02 15:04:05")))
+				right.WriteString(fmt.Sprintf("ETag: %s\n", m.objectMetadata.ETag))
+				right.WriteString(fmt.Sprintf("Storage Class: %s\n", m.objectMetadata.StorageClass))
+				right.WriteString(fmt.Sprintf("Content Type: %s\n", m.objectMetadata.ContentType))
+				if len(m.objectMetadata.Metadata) != 0 {
+					right.WriteString("User Metadata:\n")
+					for k, v := range m.objectMetadata.Metadata {
+						right.WriteString(fmt.Sprintf("  %s: %s\n", k, v))
+					}
+				}
+				right.WriteString(fmt.Sprintf("\nPress [Enter] to download %s\n", strings.Join(m.breadcrumbs[1:], "/")))
 			}
 		}
 		right.WriteString("\n" + ChoiceStyle(m.breadcrumbs[0]+strings.Join(m.breadcrumbs[1:], "/")))

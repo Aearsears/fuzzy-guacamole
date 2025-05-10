@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Aearsears/fuzzy-guacamole/internal"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,7 +28,19 @@ const (
 	S3OpGetObject
 	S3OpPutObject
 	S3OpDeleteObject
+	S3OpGetObjectMetadata
 )
+
+type S3ObjectMetadata struct {
+	Key           string
+	Bucket        string
+	ContentType   string
+	ContentLength int64
+	LastModified  time.Time
+	ETag          string
+	StorageClass  types.StorageClass
+	Metadata      map[string]string
+}
 
 type S3MenuMessage struct {
 	Op         S3OperationType
@@ -34,6 +48,7 @@ type S3MenuMessage struct {
 	Buckets    []types.Bucket // for ListBuckets
 	Objects    []string       // for ListObjects
 	Bucket     string
+	Metadata   S3ObjectMetadata
 }
 
 func (c *S3Client) NewMessage() S3MenuMessage {
@@ -199,4 +214,37 @@ func (c *S3Client) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput
 		mssg.APIMessage.Status = fmt.Sprintf("Deleted %s/%s successfully", *input.Bucket, *input.Key)
 		return mssg, err
 	})
+}
+
+func (c *S3Client) GetObjectMetadata(ctx context.Context, input *s3.HeadObjectInput) tea.Cmd {
+	return c.Wrapper(func() (any, error) {
+		resp, err := c.Client.HeadObject(ctx, input)
+		mssg := c.NewMessage()
+		mssg.APIMessage = internal.APIMessage{
+			Response: resp,
+			Err:      err,
+		}
+		mssg.Op = S3OpGetObjectMetadata
+
+		if err != nil {
+			return mssg, err
+		}
+
+		metadata := S3ObjectMetadata{
+			Key:           *input.Key,
+			Bucket:        *input.Bucket,
+			ContentType:   aws.ToString(resp.ContentType),
+			ContentLength: *resp.ContentLength,
+			LastModified:  *resp.LastModified,
+			ETag:          aws.ToString(resp.ETag),
+			StorageClass:  resp.StorageClass,
+			Metadata:      resp.Metadata,
+		}
+		mssg.Metadata = metadata
+
+		mssg.APIMessage.Status = fmt.Sprintf("Fetched %s/%s metadata successfully", *input.Bucket, *input.Key)
+		return mssg, err
+
+	})
+
 }
