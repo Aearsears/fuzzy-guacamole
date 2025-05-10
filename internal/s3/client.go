@@ -60,6 +60,10 @@ func (c *S3Client) ListBuckets(ctx context.Context, input *s3.ListBucketsInput) 
 		}
 		mssg.Op = S3OpListBuckets
 
+		if err != nil {
+			return mssg, err
+		}
+
 		mssg.Buckets = output.Buckets
 		return mssg, err
 	})
@@ -76,6 +80,10 @@ func (c *S3Client) CreateBucket(ctx context.Context, input *s3.CreateBucketInput
 		mssg.Op = S3OpCreateBucket
 		mssg.Bucket = *input.Bucket
 
+		if err != nil {
+			return mssg, err
+		}
+
 		return mssg, err
 	})
 }
@@ -89,6 +97,10 @@ func (c *S3Client) ListObjects(ctx context.Context, input *s3.ListObjectsV2Input
 			Err:      err,
 		}
 		mssg.Op = S3OpListObjects
+
+		if err != nil {
+			return mssg, err
+		}
 
 		var objs []string
 		for _, obj := range resp.Contents {
@@ -178,10 +190,13 @@ func (c *S3Client) DeleteObject(ctx context.Context, input *s3.DeleteObjectInput
 		mssg.APIMessage = internal.APIMessage{
 			Response: resp,
 			Err:      err,
-			Status:   fmt.Sprintf("Deleted %s/%s successfully", *input.Bucket, *input.Key),
 		}
 		mssg.Op = S3OpDeleteObject
+		if err != nil {
+			return mssg, err
+		}
 
+		mssg.APIMessage.Status = fmt.Sprintf("Deleted %s/%s successfully", *input.Bucket, *input.Key)
 		return mssg, err
 	})
 }
