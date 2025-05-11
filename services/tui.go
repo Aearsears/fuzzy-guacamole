@@ -65,7 +65,6 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = m.views[profileMenu].Init()
 			}
 		} else if msg.menu == s3Menu {
-			// switch to s3 menu and let it handle
 			m.state = s3Menu
 			if m.views[s3Menu] == nil {
 				m.views[s3Menu] = InitS3Menu()
@@ -156,46 +155,53 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m TUI) View() string {
 	menu := ""
-	// todo; implement a better way to handle this
-	headerStyle := lipgloss.NewStyle().
-		Width(WindowSize.Width).
-		Align(lipgloss.Center).
-		Bold(true)
 
-	infoStyle := lipgloss.NewStyle().
-		Width(WindowSize.Width).
-		Align(lipgloss.Left)
+	left := fmt.Sprintf("Profile: %s   Region: %s", m.profile, m.config.Region)
+	center := ""
+	switch m.state {
+	case mainMenu:
+		center = "[AWS] Main Menu"
+	case profileMenu:
+		center = "[AWS] Profiles"
+	case s3Menu:
+		center = "[AWS] S3"
+	}
 
-	info := infoStyle.Render(fmt.Sprintf("Profile: %s   Region: %s", m.profile, m.config.Region))
+	totalWidth := WindowSize.Width
+	leftWidth := lipgloss.Width(left)
+	centerWidth := lipgloss.Width(center)
+
+	// Calculate center start, but don't overlap left
+	centerStart := (totalWidth - centerWidth) / 2
+	if centerStart < leftWidth+1 {
+		centerStart = leftWidth + 1
+	}
+	space := ""
+	if centerStart > leftWidth {
+		space = lipgloss.NewStyle().Width(centerStart - leftWidth).Render("")
+	}
+
+	headerLine := lipgloss.NewStyle().Width(leftWidth).Align(lipgloss.Left).Render(left) +
+		space +
+		lipgloss.NewStyle().Width(centerWidth).Align(lipgloss.Center).Bold(true).Render(center)
+
+	menu += headerLine + "\n"
 
 	switch m.state {
 	case mainMenu:
-		header := headerStyle.Render("[AWS] Main Menu")
-		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
 		menu += m.views[mainMenu].View()
 	case profileMenu:
-		header := headerStyle.Render("[AWS] Profiles")
-		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
 		menu += m.views[profileMenu].View()
 	case s3Menu:
-		header := headerStyle.Render("[AWS] S3")
-		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
 		menu += m.views[s3Menu].View()
 	}
 
 	menu += "\n" + m.statusBar.View()
 
 	helpText := "\n"
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Up.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Down.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Left.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Right.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Create.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Delete.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Enter.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Back.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s ", Keymap.Backspace.Help()))
-	helpText += FooterStyle(fmt.Sprintf("%s \n", Keymap.Quit.Help()))
+	for _, binding := range Keymap.List() {
+		helpText += FooterStyle(fmt.Sprintf("%s ", binding.Help()))
+	}
 
 	menu += helpText
 	return wordwrap.String(menu, WindowSize.Width)

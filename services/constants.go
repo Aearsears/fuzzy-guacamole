@@ -100,6 +100,14 @@ type keymap struct {
 	Backspace key.Binding
 }
 
+func (k keymap) List() []key.Binding {
+	return []key.Binding{
+		k.Up, k.Down, k.Left, k.Right,
+		k.Create, k.Enter, k.Rename, k.Delete,
+		k.Back, k.Quit, k.Backspace,
+	}
+}
+
 // Keymap reusable key mappings shared across models
 var Keymap = keymap{
 	Up: key.NewBinding(
