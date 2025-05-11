@@ -37,10 +37,12 @@ type TUI struct {
 func InitTUI() TUI {
 	views := make(map[int]tea.Model)
 	views[int(mainMenu)] = InitialMenu()
+	cfg, _ := utils.LoadAWSConfig("")
 	return TUI{
 		state:     mainMenu,
 		views:     views,
-		profile:   "N/A",
+		profile:   "default",
+		config:    cfg,
 		quitting:  false,
 		statusBar: InitStatusBar(),
 	}
@@ -72,6 +74,7 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, cmd
 	case ProfileMenuMessage:
+		m.state = mainMenu
 		if m.profile != msg.profile {
 			m.profile = msg.profile
 			m.config = msg.config
@@ -86,12 +89,12 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 	m.config = cfg
 			// }
 
+			return m, utils.SendMessage(internal.APIMessage{
+				Status: fmt.Sprintf("Profile changed to %s", m.profile),
+			})
 		}
-		m.state = mainMenu
 		// todo: if profile is different, then need to refresh all clients
-		return m, utils.SendMessage(internal.APIMessage{
-			Status: fmt.Sprintf("Profile changed to %s", m.profile),
-		})
+		return m, nil
 
 	case internal.APIMessage, StatusBarTimeoutMessage:
 		newStatusBar, newCmd := m.statusBar.Update(msg)
@@ -154,24 +157,29 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m TUI) View() string {
 	menu := ""
 	// todo; implement a better way to handle this
+	headerStyle := lipgloss.NewStyle().
+		Width(WindowSize.Width).
+		Align(lipgloss.Center).
+		Bold(true)
+
+	infoStyle := lipgloss.NewStyle().
+		Width(WindowSize.Width).
+		Align(lipgloss.Left)
+
+	info := infoStyle.Render(fmt.Sprintf("Profile: %s   Region: %s", m.profile, m.config.Region))
+
 	switch m.state {
 	case mainMenu:
-		s := "[AWS] Main Menu"
-		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
-		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
-		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
+		header := headerStyle.Render("[AWS] Main Menu")
+		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
 		menu += m.views[int(mainMenu)].View()
 	case profileMenu:
-		s := "[AWS] Profiles"
-		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
-		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
-		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
+		header := headerStyle.Render("[AWS] Profiles")
+		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
 		menu += m.views[int(profileMenu)].View()
 	case s3Menu:
-		s := "[AWS] S3"
-		termWidth := lipgloss.Width(s) + 10           // Adding extra space to avoid clipping
-		profileStyle := ProfileStyle.Width(termWidth) // Align text to the right
-		menu += HeaderStyle(s) + " " + profileStyle.Render(fmt.Sprintf("Profile: %s", m.profile)) + "\n"
+		header := headerStyle.Render("[AWS] S3")
+		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
 		menu += m.views[int(s3Menu)].View()
 	}
 
