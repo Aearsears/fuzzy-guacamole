@@ -26,7 +26,7 @@ type SwitchMenuMessage struct {
 
 type TUI struct {
 	state     SessionState
-	views     map[int]tea.Model
+	views     map[SessionState]tea.Model
 	profile   string
 	config    aws.Config
 	statusBar StatusBar
@@ -35,8 +35,8 @@ type TUI struct {
 }
 
 func InitTUI() TUI {
-	views := make(map[int]tea.Model)
-	views[int(mainMenu)] = InitialMenu()
+	views := make(map[SessionState]tea.Model)
+	views[mainMenu] = InitialMenu()
 	cfg, _ := utils.LoadAWSConfig("")
 	return TUI{
 		state:     mainMenu,
@@ -60,16 +60,16 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case SwitchMenuMessage:
 		if msg.menu == profileMenu {
 			m.state = profileMenu
-			if m.views[int(profileMenu)] == nil {
-				m.views[int(profileMenu)] = InitProfileMenu()
-				cmd = m.views[int(profileMenu)].Init()
+			if m.views[profileMenu] == nil {
+				m.views[profileMenu] = InitProfileMenu()
+				cmd = m.views[profileMenu].Init()
 			}
 		} else if msg.menu == s3Menu {
 			// switch to s3 menu and let it handle
 			m.state = s3Menu
-			if m.views[int(s3Menu)] == nil {
-				m.views[int(s3Menu)] = InitS3Menu()
-				cmd = m.views[int(s3Menu)].Init()
+			if m.views[s3Menu] == nil {
+				m.views[s3Menu] = InitS3Menu()
+				cmd = m.views[s3Menu].Init()
 			}
 		}
 		return m, cmd
@@ -124,28 +124,28 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch m.state {
 	case mainMenu:
-		newMainMenu, newCmd := m.views[int(mainMenu)].Update(msg)
+		newMainMenu, newCmd := m.views[mainMenu].Update(msg)
 		mainMenuModel, ok := newMainMenu.(MainMenu)
 		if !ok {
 			panic("assertion on mainmenu failed")
 		}
-		m.views[int(mainMenu)] = mainMenuModel
+		m.views[mainMenu] = mainMenuModel
 		cmd = newCmd
 	case profileMenu:
-		newProfile, newCmd := m.views[int(profileMenu)].Update(msg)
+		newProfile, newCmd := m.views[profileMenu].Update(msg)
 		profileMenuModel, ok := newProfile.(ProfileMenu)
 		if !ok {
 			panic("assertion on profile menu failed")
 		}
-		m.views[int(profileMenu)] = profileMenuModel
+		m.views[profileMenu] = profileMenuModel
 		cmd = newCmd
 	case s3Menu:
-		newS3, newCmd := m.views[int(s3Menu)].Update(msg)
+		newS3, newCmd := m.views[s3Menu].Update(msg)
 		s3MenuModel, ok := newS3.(S3Menu)
 		if !ok {
 			panic("assertion on S3 menu failed")
 		}
-		m.views[int(s3Menu)] = s3MenuModel
+		m.views[s3Menu] = s3MenuModel
 		cmd = newCmd
 	}
 
@@ -172,15 +172,15 @@ func (m TUI) View() string {
 	case mainMenu:
 		header := headerStyle.Render("[AWS] Main Menu")
 		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
-		menu += m.views[int(mainMenu)].View()
+		menu += m.views[mainMenu].View()
 	case profileMenu:
 		header := headerStyle.Render("[AWS] Profiles")
 		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
-		menu += m.views[int(profileMenu)].View()
+		menu += m.views[profileMenu].View()
 	case s3Menu:
 		header := headerStyle.Render("[AWS] S3")
 		menu += lipgloss.JoinVertical(lipgloss.Top, header, info) + "\n"
-		menu += m.views[int(s3Menu)].View()
+		menu += m.views[s3Menu].View()
 	}
 
 	menu += "\n" + m.statusBar.View()
