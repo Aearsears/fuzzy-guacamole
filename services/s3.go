@@ -68,8 +68,13 @@ func InitS3Menu() S3Menu {
 	input.Placeholder = "Enter a new bucket name..."
 	input.CharLimit = 250
 	input.Width = 50
+
+	//todo: handle error
+	cfg, _ := utils.LoadAWSConfig("")
+
+	client, _ := utils.ClientFactory("s3", cfg, true).(s3.S3API)
 	return S3Menu{
-		s3Client:    createS3Client(),
+		s3Client:    client,
 		buckets:     nil,
 		objects:     nil,
 		fileTree:    &internal.Tree{},
@@ -87,7 +92,6 @@ func InitS3Menu() S3Menu {
 }
 
 func (m S3Menu) Init() tea.Cmd {
-	// Load buckets on init
 	return tea.Batch(m.spinner.Tick,
 		m.s3Client.ListBuckets(context.Background(),
 			&s3aws.ListBucketsInput{}),
@@ -107,6 +111,14 @@ func (m S3Menu) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+
+	case internal.AWSConfigMessage:
+		m.s3Client = m.createS3Client(msg.Config, true)
+		//refresh the view
+		// refresh last recently used views to not cause too much latency
+		cmds = append(cmds,
+			m.s3Client.ListBuckets(context.Background(),
+				&s3aws.ListBucketsInput{}))
 
 	case s3.S3MenuMessage:
 		if msg.APIMessage.Err != nil {
@@ -427,8 +439,8 @@ func (m S3Menu) View() string {
 	return menu
 }
 
-func createS3Client() s3.S3API {
-	client, ok := utils.ClientFactory("s3").(s3.S3API)
+func (m S3Menu) createS3Client(cfg aws.Config, dev bool) s3.S3API {
+	client, ok := utils.ClientFactory("s3", cfg, true).(s3.S3API)
 	if !ok {
 		panic("utils.ClientFactory(\"s3\") does not implement s3.S3API")
 	}

@@ -19,13 +19,10 @@ type Client interface {
 	// NewMessage() T
 }
 
-func ClientFactory(clientType string) Client {
-	if clientType == "s3" {
-		// Endpoint: http://localhost:4566
-		// Region: us-east-1
-		// Access key: test
-		// Secret key: test
-		// Custom endpoint resolver
+func ClientFactory(clientType string, cfg aws.Config, dev bool) Client {
+	var c aws.Config
+	var err error
+	if dev {
 		customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 			if service == awss3.ServiceID {
 				return aws.Endpoint{
@@ -39,7 +36,7 @@ func ClientFactory(clientType string) Client {
 			credentials.NewStaticCredentialsProvider("test", "test", ""),
 		)
 		// Load config with custom resolver
-		cfg, err := config.LoadDefaultConfig(context.TODO(),
+		c, err = config.LoadDefaultConfig(context.TODO(),
 			config.WithRegion("us-east-1"),
 			config.WithCredentialsProvider(staticCreds),
 			config.WithEndpointResolverWithOptions(customResolver),
@@ -48,10 +45,20 @@ func ClientFactory(clientType string) Client {
 			log.Fatalf("unable to load SDK config, %v", err)
 		}
 
-		s3Client := awss3.NewFromConfig(cfg, func(o *awss3.Options) {
-			o.BaseEndpoint = aws.String("http://localhost:4566")
-			o.UsePathStyle = true
-		})
+	}
+
+	if clientType == "s3" {
+		var s3Client *awss3.Client
+		if dev {
+			s3Client = awss3.NewFromConfig(c, func(o *awss3.Options) {
+				o.BaseEndpoint = aws.String("http://localhost:4566")
+				o.UsePathStyle = true
+			})
+		} else {
+			s3Client = awss3.NewFromConfig(cfg, func(o *awss3.Options) {
+				o.UsePathStyle = true
+			})
+		}
 		return &s3.S3Client{Client: s3Client}
 
 	}

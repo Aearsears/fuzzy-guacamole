@@ -77,20 +77,15 @@ func (m TUI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.profile != msg.profile {
 			m.profile = msg.profile
 			m.config = msg.config
-			// if err != nil {
-			// 	mssg := internal.APIMessage{
-			// 		Err: err,
-			// 	}
-			// 	return m, func() tea.Msg {
-			// 		return mssg
-			// 	}
-			// } else {
-			// 	m.config = cfg
-			// }
 
-			return m, utils.SendMessage(internal.APIMessage{
+			cmd1 := utils.SendMessage(internal.APIMessage{
 				Status: fmt.Sprintf("Profile changed to %s", m.profile),
 			})
+			cmd2 := utils.SendMessage(internal.AWSConfigMessage{
+				Config: m.config,
+			})
+
+			return m, tea.Batch(cmd1, cmd2)
 		}
 		// todo: if profile is different, then need to refresh all clients
 		return m, nil
